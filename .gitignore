@@ -2,3 +2,4 @@
 gomoku.cabal
 *~
 .idea/
+*.iml
