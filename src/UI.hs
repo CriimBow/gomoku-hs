@@ -7,7 +7,7 @@ import Control.Monad (forever, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 
-import Snake
+import Gomoku
 
 import Brick
   ( App(..)
@@ -56,11 +56,6 @@ data Tick =
 -- Not currently used, but will be easier to refactor
 type Name = ()
 
-data Cell
-  = Snake
-  | Food
-  | Empty
-
 -- App definition
 app :: App AppState Tick Name
 app =
@@ -79,23 +74,17 @@ main = do
     forever $ do
       writeBChan chan Tick
       threadDelay 100000 -- decides how fast your game moves
-  g <- initGame
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  void $ customMain initialVty buildVty (Just chan) app g
+  void $ customMain initialVty buildVty (Just chan) app initState
 
 -- Handling events
 handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
-handleEvent g (AppEvent Tick) = continue $ step g
-handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ turn North g
-handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ turn South g
-handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ turn East g
-handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue $ turn West g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'k') [])) = continue $ turn North g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'j') [])) = continue $ turn South g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'l') [])) = continue $ turn East g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'h') [])) = continue $ turn West g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'r') [])) = liftIO (initGame) >>= continue
+handleEvent g (AppEvent Tick) = continue g
+handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue g
+handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue g
+handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue g
+handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue g
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
@@ -128,8 +117,8 @@ drawGrid g = withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Snake") $ 
       | otherwise = Empty
 
 drawCell :: Cell -> Widget Name
-drawCell Snake = withAttr snakeAttr cw
-drawCell Food = withAttr foodAttr cw
+drawCell PieceWhite = withAttr snakeAttr cw
+drawCell PieceBlack = withAttr foodAttr cw
 drawCell Empty = withAttr emptyAttr cw
 
 cw :: Widget Name
