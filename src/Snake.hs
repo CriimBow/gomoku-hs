@@ -6,7 +6,7 @@ module Snake
   ( initGame
   , step
   , turn
-  , Game(..)
+  , AppState(..)
   , Direction(..)
   , dead
   , food
@@ -30,7 +30,7 @@ import Linear.V2 (V2(..), _x, _y)
 import System.Random (Random(..), newStdGen)
 
 -- Types
-data Game = Game
+data AppState = AppState
   { _snake :: Snake -- ^ snake as a sequence of points in N2
   , _dir :: Direction -- ^ direction
   , _food :: Coord -- ^ location of the food
@@ -56,17 +56,18 @@ data Direction
   | West
   deriving (Eq, Show)
 
-makeLenses ''Game
+makeLenses ''AppState
 
 -- Constants
-height, width :: Int
+height :: Int
 height = 20
 
+width :: Int
 width = 20
 
 -- Functions
 -- | Step forward in time
-step :: Game -> Game
+step :: AppState -> AppState
 step s =
   flip execState s . runMaybeT $
   -- Make sure the game isn't paused or over
@@ -78,13 +79,13 @@ step s =
     die <|> eatFood <|> MaybeT (Just <$> modify move)
 
 -- | Possibly die if next head position is in snake
-die :: MaybeT (State Game) ()
+die :: MaybeT (State AppState) ()
 die = do
   MaybeT . fmap guard $ elem <$> (nextHead <$> get) <*> (use snake)
   MaybeT . fmap Just $ dead .= True
 
 -- | Possibly eat food if next head position is food
-eatFood :: MaybeT (State Game) ()
+eatFood :: MaybeT (State AppState) ()
 eatFood = do
   MaybeT . fmap guard $ (==) <$> (nextHead <$> get) <*> (use food)
   MaybeT . fmap Just $ do
@@ -93,7 +94,7 @@ eatFood = do
     nextFood
 
 -- | Set a valid next food coordinate
-nextFood :: State Game ()
+nextFood :: State AppState ()
 nextFood = do
   (f :| fs) <- use foods
   foods .= fs
@@ -102,13 +103,13 @@ nextFood = do
     False -> food .= f
 
 -- | Move snake along in a marquee fashion
-move :: Game -> Game
-move g@Game {_snake = (s :|> _)} = g & snake .~ (nextHead g <| s)
+move :: AppState -> AppState
+move g@AppState {_snake = (s :|> _)} = g & snake .~ (nextHead g <| s)
 move _ = error "Snakes can't be empty!"
 
 -- | Get next head position of the snake
-nextHead :: Game -> Coord
-nextHead Game {_dir = d, _snake = (a :<| _)}
+nextHead :: AppState -> Coord
+nextHead AppState {_dir = d, _snake = (a :<| _)}
   | d == North = a & _y %~ (\y -> (y + 1) `mod` height)
   | d == South = a & _y %~ (\y -> (y - 1) `mod` height)
   | d == East = a & _x %~ (\x -> (x + 1) `mod` width)
@@ -118,7 +119,7 @@ nextHead _ = error "Snakes can't be empty!"
 -- | Turn game direction (only turns orthogonally)
 --
 -- Implicitly unpauses yet locks game
-turn :: Direction -> Game -> Game
+turn :: Direction -> AppState -> AppState
 turn d g =
   if g ^. locked
     then g
@@ -131,13 +132,13 @@ turnDir n c
   | otherwise = c
 
 -- | Initialize a paused game with random food location
-initGame :: IO Game
+initGame :: IO AppState
 initGame = do
   (f :| fs) <- fromList . randomRs (V2 0 0, V2 (width - 1) (height - 1)) <$> newStdGen
   let xm = width `div` 2
       ym = height `div` 2
       g =
-        Game
+        AppState
           { _snake = (S.singleton (V2 xm ym))
           , _food = f
           , _foods = fs

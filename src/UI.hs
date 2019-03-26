@@ -49,17 +49,11 @@ import qualified Data.Sequence as S
 import qualified Graphics.Vty as V
 import Linear.V2 (V2(..))
 
--- Types
--- | Ticks mark passing of time
---
--- This is our custom event that will be constantly fed into the app.
+-- Custom event types
 data Tick =
   Tick
 
--- | Named resources
---
 -- Not currently used, but will be easier to refactor
--- if we call this "Name" now.
 type Name = ()
 
 data Cell
@@ -68,7 +62,7 @@ data Cell
   | Empty
 
 -- App definition
-app :: App Game Tick Name
+app :: App AppState Tick Name
 app =
   App
     { appDraw = drawUI
@@ -81,16 +75,17 @@ app =
 main :: IO ()
 main = do
   chan <- newBChan 10
-  forkIO $ forever $ do
-    writeBChan chan Tick
-    threadDelay 100000 -- decides how fast your game moves
+  forkIO $
+    forever $ do
+      writeBChan chan Tick
+      threadDelay 100000 -- decides how fast your game moves
   g <- initGame
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty (Just chan) app g
 
 -- Handling events
-handleEvent :: Game -> BrickEvent Name Tick -> EventM Name (Next Game)
+handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
 handleEvent g (AppEvent Tick) = continue $ step g
 handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ turn North g
 handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ turn South g
@@ -106,10 +101,10 @@ handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
 
 -- Drawing
-drawUI :: Game -> [Widget Name]
+drawUI :: AppState -> [Widget Name]
 drawUI g = [C.center $ padRight (Pad 2) (drawStats g) <+> drawGrid g]
 
-drawStats :: Game -> Widget Name
+drawStats :: AppState -> Widget Name
 drawStats g = hLimit 11 $ vBox [drawScore (g ^. score), padTop (Pad 2) $ drawGameOver (g ^. dead)]
 
 drawScore :: Int -> Widget Name
@@ -121,7 +116,7 @@ drawGameOver dead =
     then withAttr gameOverAttr $ C.hCenter $ str "GAME OVER"
     else emptyWidget
 
-drawGrid :: Game -> Widget Name
+drawGrid :: AppState -> Widget Name
 drawGrid g = withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Snake") $ vBox rows
   where
     rows = [hBox $ cellsInRow r | r <- [height - 1,height - 2 .. 0]]
@@ -140,6 +135,7 @@ drawCell Empty = withAttr emptyAttr cw
 cw :: Widget Name
 cw = str "  "
 
+-- AttrMap
 theMap :: AttrMap
 theMap =
   attrMap
@@ -149,9 +145,11 @@ theMap =
 gameOverAttr :: AttrName
 gameOverAttr = "gameOver"
 
-snakeAttr, foodAttr, emptyAttr :: AttrName
+snakeAttr :: AttrName
 snakeAttr = "snakeAttr"
 
+foodAttr :: AttrName
 foodAttr = "foodAttr"
 
+emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
