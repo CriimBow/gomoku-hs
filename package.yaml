@@ -1,6 +1,6 @@
 name:                gomoku
 version:             0.1.0.0
-github:              "githubuser/gomoku"
+github:              "cepalle/gomoku"
 license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
@@ -17,13 +17,13 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/gomoku#readme>
+description:         Please see the README on GitHub at <https://github.com/cepalle/gomoku#readme>
 
 dependencies:
 - base >= 4.7 && < 5
 
 library:
-  source-dirs: src
+  source-dirs: lib
 
 executables:
   gomoku-exe:
@@ -36,6 +36,13 @@ executables:
     dependencies:
     - gomoku
     - brick
+    - lens
+    - extra
+    - containers
+    - linear
+    - random
+    - transformers
+    - vty
 
 tests:
   gomoku-test:
