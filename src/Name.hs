@@ -1,5 +1,3 @@
-module Name
-  ( Name
-  ) where
+module Name where
 
 type Name = ()

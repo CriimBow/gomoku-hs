@@ -2,45 +2,15 @@
 
 module UI where
 
-import Control.Concurrent (forkIO, threadDelay)
-import Control.Monad (forever, void)
-import Control.Monad.IO.Class (liftIO)
-import Data.Maybe (fromMaybe)
+import Brick (AttrMap, AttrName, Widget, attrMap, hBox, on, str, vBox, withAttr, withBorderStyle)
+import Control.Lens.Combinators (imap)
+import Name (Name)
 
-import qualified Reducer as R
-
-import Brick
-  ( App(..)
-  , AttrMap
-  , AttrName
-  , BrickEvent(..)
-  , EventM
-  , Next
-  , Padding(..)
-  , Widget
-  , attrMap
-  , continue
-  , customMain
-  , hBox
-  , halt
-  , neverShowCursor
-  , on
-  , str
-  , vBox
-  , withAttr
-  , withBorderStyle
-  )
-import Brick.BChan (newBChan, writeBChan)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import Control.Lens ((^.))
-import Control.Lens.Combinators (imap)
-import Data.Sequence (Seq)
-import qualified Data.Sequence as S
 import qualified Graphics.Vty as V
-import Name (Name)
-import Event (handleEvent, Tick(..))
+import qualified Reducer as R
 
 -- DRAWING
 drawUI :: R.AppState -> [Widget Name]
@@ -87,25 +57,3 @@ cursorAttr = "cursorAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
-
--- MAIN APP
-app :: App R.AppState Tick Name
-app =
-  App
-    { appDraw = drawUI
-    , appChooseCursor = neverShowCursor
-    , appHandleEvent = handleEvent
-    , appStartEvent = return
-    , appAttrMap = const theMap
-    }
-
-main :: IO ()
-main = do
-  chan <- newBChan 10
-  forkIO $
-    forever $ do
-      writeBChan chan Tick
-      threadDelay 300000 -- cursor alternator speed
-  let buildVty = V.mkVty V.defaultConfig
-  initialVty <- buildVty
-  void $ customMain initialVty buildVty (Just chan) app R.initState

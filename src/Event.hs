@@ -1,11 +1,9 @@
-module Event
-  ( handleEvent
-  , Tick(..)
-  ) where
+module Event where
 
 import Brick (BrickEvent(..), EventM, Next, continue, halt)
-import qualified Graphics.Vty as V
 import Name (Name)
+
+import qualified Graphics.Vty as V
 import qualified Reducer as R
 
 -- EVENTS

@@ -1,16 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Reducer
-  ( initState
-  , Cell(..)
-  , AppState(..)
-  , moveCursor
-  , CursorDir(..)
-  , placePiece
-  ) where
+module Reducer where
 
 import Constant (hGoGrid)
-
 import Control.Lens.Combinators (imap)
 import System.Random (Random(..), newStdGen)
 
