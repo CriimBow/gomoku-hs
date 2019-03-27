@@ -75,14 +75,14 @@ main = do
   forkIO $
     forever $ do
       writeBChan chan Tick
-      threadDelay 100000 -- cursor switch
+      threadDelay 300000 -- cursor alternator speed
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty (Just chan) app initState
 
 -- Handling events
 handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
-handleEvent g (AppEvent Tick) = continue g
+handleEvent g (AppEvent Tick) = continue $ g {cursorVisible = not (cursorVisible g)}
 handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ g {cursor = moveCursor g Gomoku.Up}
 handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ g {cursor = moveCursor g Gomoku.Down}
 handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ g {cursor = moveCursor g Gomoku.Right}
@@ -96,15 +96,15 @@ drawUI :: AppState -> [Widget Name]
 drawUI g = [C.center $ drawGrid g]
 
 drawGrid :: AppState -> Widget Name
-drawGrid AppState {goGrid = grd, cursor = cr} =
+drawGrid AppState {goGrid = grd, cursor = cr, cursorVisible = crv} =
   withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
   where
     rows = imap cellsInRow grd
-    cellsInRow y r = hBox $ imap (drawCell cr y) r
+    cellsInRow y r = hBox $ imap (drawCell cr crv y) r
 
-drawCell :: V2 Int -> Int -> Int -> Cell -> Widget Name
-drawCell (V2 cx cy) y x cell =
-  if cx == x && cy == y
+drawCell :: V2 Int -> Bool -> Int -> Int -> Cell -> Widget Name
+drawCell (V2 cx cy) crv y x cell =
+  if crv && cx == x && cy == y
     then withAttr cursorAttr cw
     else case cell of
            PieceWhite -> withAttr pieceWhiteAttr cw

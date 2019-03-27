@@ -27,6 +27,7 @@ import System.Random (Random(..), newStdGen)
 data AppState = AppState
   { goGrid :: [[Cell]] -- ^ go grid with piece
   , cursor :: Coord -- ^ user cursor for play
+  , cursorVisible :: Bool -- ^ cursor alternator
   }
 
 type Coord = V2 Int
@@ -40,7 +41,7 @@ data Cell
 -- | Initialize the app state
 initState :: AppState
 initState =
-  AppState {goGrid = [[Gomoku.PieceBlack | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]], cursor = V2 0 0}
+  AppState {goGrid = [[Gomoku.PieceBlack | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]], cursor = V2 0 0, cursorVisible = False}
 
 data CursorDir
   = Up
