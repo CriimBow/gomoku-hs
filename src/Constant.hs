@@ -1,8 +1,4 @@
-module Constant where
+module Constant (hGoGrid) where
 
--- Constants
-heightGoGrid :: Int
-heightGoGrid = 19
-
-widthGoGrid :: Int
-widthGoGrid = 19
+hGoGrid :: Int
+hGoGrid = 19

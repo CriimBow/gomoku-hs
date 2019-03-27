@@ -9,7 +9,7 @@ module Gomoku
   , placePiece
   ) where
 
-import Constant
+import Constant (hGoGrid)
 
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
@@ -54,7 +54,7 @@ data CursorDir
 initState :: AppState
 initState =
   AppState
-    { goGrid = [[Gomoku.EmptyCell | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]]
+    { goGrid = [[Gomoku.EmptyCell | j <- [1 .. hGoGrid]] | i <- [1 .. hGoGrid]]
     , cursor = V2 0 0
     , cursorVisible = False
     , playerTurn = PlayerWhite
@@ -62,10 +62,10 @@ initState =
 
 -- UPDATE STATE
 moveCursor :: AppState -> CursorDir -> Coord
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Up = V2 x ((y - 1) `mod` heightGoGrid)
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Down = V2 x ((y + 1) `mod` heightGoGrid)
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Right = V2 ((x + 1) `mod` widthGoGrid) y
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Left = V2 ((x - 1) `mod` widthGoGrid) y
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Up = V2 x ((y - 1) `mod` hGoGrid)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Down = V2 x ((y + 1) `mod` hGoGrid)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Right = V2 ((x + 1) `mod` hGoGrid) y
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Left = V2 ((x - 1) `mod` hGoGrid) y
 
 placePiece :: AppState -> AppState
 placePiece s =

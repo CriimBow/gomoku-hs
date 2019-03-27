@@ -7,7 +7,6 @@ import Control.Monad (forever, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 
-import Constant
 import Gomoku
 
 import Brick
@@ -51,36 +50,10 @@ import qualified Data.Sequence as S
 import qualified Graphics.Vty as V
 import Linear.V2 (V2(..))
 
--- Custom event types
+-- EVENTS
 data Tick =
   Tick
 
--- Not currently used, but will be easier to refactor
-type Name = ()
-
--- App definition
-app :: App AppState Tick Name
-app =
-  App
-    { appDraw = drawUI
-    , appChooseCursor = neverShowCursor
-    , appHandleEvent = handleEvent
-    , appStartEvent = return
-    , appAttrMap = const theMap
-    }
-
-main :: IO ()
-main = do
-  chan <- newBChan 10
-  forkIO $
-    forever $ do
-      writeBChan chan Tick
-      threadDelay 300000 -- cursor alternator speed
-  let buildVty = V.mkVty V.defaultConfig
-  initialVty <- buildVty
-  void $ customMain initialVty buildVty (Just chan) app initState
-
--- Handling events
 handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
 handleEvent g (AppEvent Tick) = continue $ g {cursorVisible = not (cursorVisible g)}
 handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ g {cursor = moveCursor g Gomoku.Up}
@@ -92,7 +65,7 @@ handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
 
--- Drawing
+-- DRAWING
 drawUI :: AppState -> [Widget Name]
 drawUI g = [C.center $ drawGrid g]
 
@@ -115,7 +88,7 @@ drawCell (V2 cx cy) crv y x cell =
 cw :: Widget Name
 cw = str "  "
 
--- AttrMap
+-- ATTR MAP
 theMap :: AttrMap
 theMap =
   attrMap
@@ -137,3 +110,28 @@ cursorAttr = "cursorAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
+
+-- APP MAIN
+-- Not currently used, but will be easier to refactor
+type Name = ()
+
+app :: App AppState Tick Name
+app =
+  App
+    { appDraw = drawUI
+    , appChooseCursor = neverShowCursor
+    , appHandleEvent = handleEvent
+    , appStartEvent = return
+    , appAttrMap = const theMap
+    }
+
+main :: IO ()
+main = do
+  chan <- newBChan 10
+  forkIO $
+    forever $ do
+      writeBChan chan Tick
+      threadDelay 300000 -- cursor alternator speed
+  let buildVty = V.mkVty V.defaultConfig
+  initialVty <- buildVty
+  void $ customMain initialVty buildVty (Just chan) app initState
