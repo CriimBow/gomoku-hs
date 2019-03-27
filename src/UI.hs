@@ -76,8 +76,8 @@ drawGrid AppState {goGrid = grd, cursor = cr, cursorVisible = crv} =
     rows = imap cellsInRow grd
     cellsInRow y r = hBox $ imap (drawCell cr crv y) r
 
-drawCell :: V2 Int -> Bool -> Int -> Int -> Cell -> Widget Name
-drawCell (V2 cx cy) crv y x cell =
+drawCell :: (Int, Int) -> Bool -> Int -> Int -> Cell -> Widget Name
+drawCell (cx, cy) crv y x cell =
   if crv && cx == x && cy == y
     then withAttr cursorAttr cw
     else case cell of
