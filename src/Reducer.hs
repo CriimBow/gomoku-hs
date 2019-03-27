@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Reducer where
 
 import Constant (hGoGrid)
@@ -60,6 +58,7 @@ placePiece s =
       nextPlayer PlayerWhite = PlayerBlack
       nextPlayer PlayerBlack = PlayerWhite
       (cx, cy) = cursor s
+      upRow :: Int -> [Cell] -> [Cell]
       upRow y = imap (upCell y)
       upCell y x EmptyCell =
         if cx == x && cy == y
