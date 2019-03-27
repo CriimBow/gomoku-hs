@@ -45,6 +45,7 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
 import Control.Lens ((^.))
+import Control.Lens.Combinators (imap)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as S
 import qualified Graphics.Vty as V
@@ -82,10 +83,10 @@ main = do
 -- Handling events
 handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
 handleEvent g (AppEvent Tick) = continue g
-handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue g
-handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue g
-handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue g
-handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue g
+handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ g {cursor = moveCursor g Gomoku.Up}
+handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ g {cursor = moveCursor g Gomoku.Down}
+handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ g {cursor = moveCursor g Gomoku.Right}
+handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue $ g {cursor = moveCursor g Gomoku.Left}
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
@@ -95,28 +96,43 @@ drawUI :: AppState -> [Widget Name]
 drawUI g = [C.center $ drawGrid g]
 
 drawGrid :: AppState -> Widget Name
-drawGrid AppState {goGrid = grd} = withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
+drawGrid AppState {goGrid = grd, cursor = cr} =
+  withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
   where
-    rows = map (hBox . cellsInRow) grd
-    cellsInRow = map drawCell
+    rows = imap cellsInRow grd
+    cellsInRow y r = hBox $ imap (drawCell cr y) r
 
-drawCell :: Cell -> Widget Name
-drawCell PieceWhite = withAttr pieceWhiteAttr cw
-drawCell PieceBlack = withAttr pieceBlackAttr cw
-drawCell Empty = withAttr emptyAttr cw
+drawCell :: V2 Int -> Int -> Int -> Cell -> Widget Name
+drawCell (V2 cx cy) y x cell =
+  if cx == x && cy == y
+    then withAttr cursorAttr cw
+    else case cell of
+           PieceWhite -> withAttr pieceWhiteAttr cw
+           PieceBlack -> withAttr pieceBlackAttr cw
+           Empty -> withAttr emptyAttr cw
 
 cw :: Widget Name
 cw = str "  "
 
 -- AttrMap
 theMap :: AttrMap
-theMap = attrMap V.defAttr [(pieceWhiteAttr, V.white `on` V.white), (pieceBlackAttr, V.green `on` V.green)]
+theMap =
+  attrMap
+    V.defAttr
+    [ (pieceBlackAttr, V.black `on` V.black)
+    , (pieceWhiteAttr, V.white `on` V.white)
+    , (cursorAttr, V.green `on` V.green)
+    , (emptyAttr, V.blue `on` V.blue)
+    ]
 
 pieceBlackAttr :: AttrName
 pieceBlackAttr = "gameOver"
 
 pieceWhiteAttr :: AttrName
 pieceWhiteAttr = "snakeAttr"
+
+cursorAttr :: AttrName
+cursorAttr = "cursorAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"

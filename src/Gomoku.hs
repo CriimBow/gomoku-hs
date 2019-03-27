@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Gomoku
   ( initState
   , Cell(..)
   , AppState(..)
+  , moveCursor
+  , CursorDir (..)
   ) where
 
 import Constant
@@ -37,7 +37,19 @@ data Cell
   | Empty
 
 -- makeLenses ''AppState
-
 -- | Initialize the app state
 initState :: AppState
-initState = AppState {goGrid = [[Gomoku.PieceBlack | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]], cursor = V2 0 0}
+initState =
+  AppState {goGrid = [[Gomoku.PieceBlack | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]], cursor = V2 0 0}
+
+data CursorDir
+  = Up
+  | Down
+  | Right
+  | Left
+
+moveCursor :: AppState -> CursorDir -> Coord
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Up = V2 x (y - 1)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Down = V2 x (y + 1)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Right = V2 (x + 1) y
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Left = V2 (x - 1) y
