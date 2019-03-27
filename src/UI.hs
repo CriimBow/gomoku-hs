@@ -18,24 +18,15 @@ import Brick
   , Next
   , Padding(..)
   , Widget
-  , (<+>)
   , attrMap
   , continue
   , customMain
-  , emptyWidget
-  , fg
   , hBox
-  , hLimit
   , halt
   , neverShowCursor
   , on
-  , padAll
-  , padLeft
-  , padRight
-  , padTop
   , str
   , vBox
-  , vLimit
   , withAttr
   , withBorderStyle
   )
@@ -48,7 +39,6 @@ import Control.Lens.Combinators (imap)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as S
 import qualified Graphics.Vty as V
-import Linear.V2 (V2(..))
 
 -- EVENTS
 data Tick =
