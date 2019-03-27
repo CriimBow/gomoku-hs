@@ -5,7 +5,7 @@ module Gomoku
   , Cell(..)
   , AppState(..)
   , moveCursor
-  , CursorDir (..)
+  , CursorDir(..)
   ) where
 
 import Constant
@@ -49,7 +49,7 @@ data CursorDir
   | Left
 
 moveCursor :: AppState -> CursorDir -> Coord
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Up = V2 x (y - 1)
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Down = V2 x (y + 1)
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Right = V2 (x + 1) y
-moveCursor AppState {cursor = (V2 x y)} Gomoku.Left = V2 (x - 1) y
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Up = V2 x ((y - 1) `mod` heightGoGrid)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Down = V2 x ((y + 1) `mod` heightGoGrid)
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Right = V2 ((x + 1) `mod` widthGoGrid) y
+moveCursor AppState {cursor = (V2 x y)} Gomoku.Left = V2 ((x - 1) `mod` widthGoGrid) y
