@@ -8,6 +8,8 @@ module Gomoku
   , AppState(..)
   ) where
 
+import Constant
+
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Data.Maybe (fromMaybe)
@@ -23,8 +25,8 @@ import System.Random (Random(..), newStdGen)
 
 -- Types
 data AppState = AppState
-  { _goGrid :: [[Cell]] -- ^ go grid with piece
-  , _cursor :: Coord -- ^ user cursor for play
+  { goGrid :: [[Cell]] -- ^ go grid with piece
+  , cursor :: Coord -- ^ user cursor for play
   }
 
 type Coord = V2 Int
@@ -34,15 +36,8 @@ data Cell
   | PieceWhite
   | Empty
 
-makeLenses ''AppState
-
--- Constants
-height :: Int
-height = 19
-
-width :: Int
-width = 19
+-- makeLenses ''AppState
 
 -- | Initialize the app state
 initState :: AppState
-initState = AppState {_goGrid = [[Gomoku.Empty | j <- [1 .. width]] | i <- [1 .. height]], _cursor = V2 0 0}
+initState = AppState {goGrid = [[Gomoku.PieceBlack | j <- [1 .. widthGoGrid]] | i <- [1 .. heightGoGrid]], cursor = V2 0 0}
