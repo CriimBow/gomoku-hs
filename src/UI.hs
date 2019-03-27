@@ -87,6 +87,7 @@ handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ g {cursor = moveCursor 
 handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ g {cursor = moveCursor g Gomoku.Down}
 handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ g {cursor = moveCursor g Gomoku.Right}
 handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue $ g {cursor = moveCursor g Gomoku.Left}
+handleEvent g (VtyEvent (V.EvKey (V.KChar 'p') [])) = continue $ placePiece g
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
@@ -109,7 +110,7 @@ drawCell (V2 cx cy) crv y x cell =
     else case cell of
            PieceWhite -> withAttr pieceWhiteAttr cw
            PieceBlack -> withAttr pieceBlackAttr cw
-           Empty -> withAttr emptyAttr cw
+           EmptyCell -> withAttr emptyAttr cw
 
 cw :: Widget Name
 cw = str "  "
