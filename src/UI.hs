@@ -7,7 +7,7 @@ import Control.Monad (forever, void)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 
-import Gomoku
+import qualified Reducer as R
 
 import Brick
   ( App(..)
@@ -54,36 +54,36 @@ import Linear.V2 (V2(..))
 data Tick =
   Tick
 
-handleEvent :: AppState -> BrickEvent Name Tick -> EventM Name (Next AppState)
-handleEvent g (AppEvent Tick) = continue $ g {cursorVisible = not (cursorVisible g)}
-handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ g {cursor = moveCursor g Gomoku.Up}
-handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ g {cursor = moveCursor g Gomoku.Down}
-handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ g {cursor = moveCursor g Gomoku.Right}
-handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue $ g {cursor = moveCursor g Gomoku.Left}
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'p') [])) = continue $ placePiece g
+handleEvent :: R.AppState -> BrickEvent Name Tick -> EventM Name (Next R.AppState)
+handleEvent g (AppEvent Tick) = continue $ g {R.cursorVisible = not (R.cursorVisible g)}
+handleEvent g (VtyEvent (V.EvKey V.KUp [])) = continue $ R.moveCursor g R.CursorUp
+handleEvent g (VtyEvent (V.EvKey V.KDown [])) = continue $ R.moveCursor g R.CursorDown
+handleEvent g (VtyEvent (V.EvKey V.KRight [])) = continue $ R.moveCursor g R.CursorRight
+handleEvent g (VtyEvent (V.EvKey V.KLeft [])) = continue $ R.moveCursor g R.CursorLeft
+handleEvent g (VtyEvent (V.EvKey (V.KChar 'p') [])) = continue $ R.placePiece g
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
 
 -- DRAWING
-drawUI :: AppState -> [Widget Name]
+drawUI :: R.AppState -> [Widget Name]
 drawUI g = [C.center $ drawGrid g]
 
-drawGrid :: AppState -> Widget Name
-drawGrid AppState {goGrid = grd, cursor = cr, cursorVisible = crv} =
+drawGrid :: R.AppState -> Widget Name
+drawGrid R.AppState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
   withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
   where
     rows = imap cellsInRow grd
     cellsInRow y r = hBox $ imap (drawCell cr crv y) r
 
-drawCell :: (Int, Int) -> Bool -> Int -> Int -> Cell -> Widget Name
+drawCell :: (Int, Int) -> Bool -> Int -> Int -> R.Cell -> Widget Name
 drawCell (cx, cy) crv y x cell =
   if crv && cx == x && cy == y
     then withAttr cursorAttr cw
     else case cell of
-           PieceWhite -> withAttr pieceWhiteAttr cw
-           PieceBlack -> withAttr pieceBlackAttr cw
-           EmptyCell -> withAttr emptyAttr cw
+           R.PieceWhite -> withAttr pieceWhiteAttr cw
+           R.PieceBlack -> withAttr pieceBlackAttr cw
+           R.EmptyCell -> withAttr emptyAttr cw
 
 cw :: Widget Name
 cw = str "  "
@@ -111,11 +111,10 @@ cursorAttr = "cursorAttr"
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
 
--- APP MAIN
--- Not currently used, but will be easier to refactor
+-- MAIN APP
 type Name = ()
 
-app :: App AppState Tick Name
+app :: App R.AppState Tick Name
 app =
   App
     { appDraw = drawUI
@@ -134,4 +133,4 @@ main = do
       threadDelay 300000 -- cursor alternator speed
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  void $ customMain initialVty buildVty (Just chan) app initState
+  void $ customMain initialVty buildVty (Just chan) app R.initState
