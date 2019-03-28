@@ -37,6 +37,7 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
       where
         cw :: Widget Name
         cw = str "  "
+drawGame _ = []
 
 drawHome :: R.GameMode -> [Widget Name]
 drawHome mode = []

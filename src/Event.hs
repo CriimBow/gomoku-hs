@@ -11,7 +11,11 @@ data CustomEvent =
   Tick
 
 handleEvent :: R.AppState -> BrickEvent Name CustomEvent -> EventM Name (Next R.AppState)
-handleEvent g (AppEvent Tick) = continue $ g {R.cursorVisible = not (R.cursorVisible g)}
+handleEvent g (AppEvent Tick) =
+  continue $
+  case g of
+    R.GameState {} -> g {R.cursorVisible = not (R.cursorVisible g)}
+    _ -> g
 handleEvent g (VtyEvent (V.EvKey V.KUp [])) =
   continue $
   case g of
