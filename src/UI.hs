@@ -20,11 +20,17 @@ drawUI g =
     R.Home mode -> appBox $ drawHome mode
     R.SoloSelectPlayer p -> appBox $ drawSoloSelectPlayer p
   where
-    appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox w]
+    appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ w]
 
-drawGame :: R.AppState -> [Widget Name]
-drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} = imap cellsInRow grd
+drawGame :: R.AppState -> Widget Name
+drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} = hBox [wInfo, wGoBoard, wCmd]
   where
+    wCmd :: Widget Name
+    wCmd = str "Cmd"
+    wInfo :: Widget Name
+    wInfo = str "info"
+    wGoBoard :: Widget Name
+    wGoBoard = vBox $ imap cellsInRow grd
     cellsInRow y r = hBox $ imap (drawCell y) r
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
@@ -34,20 +40,19 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
                R.PieceWhite -> withAttr pieceWhiteAttr cw
                R.PieceBlack -> withAttr pieceBlackAttr cw
                R.EmptyCell -> withAttr emptyAttr cw
-      where
-        cw :: Widget Name
-        cw = str "   " -- ●
+    cw :: Widget Name
+    cw = str "   " -- ●
 
-drawHome :: R.GameMode -> [Widget Name]
-drawHome mode = [hBox wg]
+drawHome :: R.GameMode -> Widget Name
+drawHome mode = hBox wg
   where
     wg =
       case mode of
         R.GameSolo p -> [withAttr selected $ str "Solo", str " ", str "Multi"]
         R.GameMulti -> [str "Solo", str " ", withAttr selected $ str "Multi"]
 
-drawSoloSelectPlayer :: R.Player -> [Widget Name]
-drawSoloSelectPlayer p = [hBox wg]
+drawSoloSelectPlayer :: R.Player -> Widget Name
+drawSoloSelectPlayer p = hBox wg
   where
     wg =
       case p of
