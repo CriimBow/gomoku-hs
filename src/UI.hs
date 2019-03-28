@@ -36,7 +36,7 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
                R.EmptyCell -> withAttr emptyAttr cw
       where
         cw :: Widget Name
-        cw = str "  "
+        cw = str "   " -- ●
 
 drawHome :: R.GameMode -> [Widget Name]
 drawHome mode = [hBox wg]
@@ -51,8 +51,8 @@ drawSoloSelectPlayer p = [hBox wg]
   where
     wg =
       case p of
-        R.PlayerWhite -> [withAttr selected $ str "White", str " ", str "Black"]
-        R.PlayerBlack -> [str "White", str " ", withAttr selected $ str "Black"]
+        R.PlayerWhite -> [withAttr selected $ str "White (1st)", str " ", str "Black (2nd)"]
+        R.PlayerBlack -> [str "White (1st)", str " ", withAttr selected $ str "Black (2nd)"]
 
 -- ATTR MAP
 theMap :: AttrMap
@@ -61,8 +61,8 @@ theMap =
     V.defAttr
     [ (pieceBlackAttr, V.black `on` V.black)
     , (pieceWhiteAttr, V.white `on` V.white)
-    , (cursorAttr, V.green `on` V.green)
-    , (emptyAttr, V.blue `on` V.blue)
+    , (cursorAttr, V.yellow `on` V.cyan)
+    , (emptyAttr, V.yellow `on` V.yellow)
     , (selected, V.black `on` V.white)
     ]
 
