@@ -2,7 +2,22 @@
 
 module UI where
 
-import Brick (AttrMap, AttrName, Widget, attrMap, bg, hBox, on, str, vBox, withAttr, withBorderStyle)
+import Brick
+  ( AttrMap
+  , AttrName
+  , Widget
+  , attrMap
+  , bg
+  , hBox
+  , on
+  , padLeft
+  , padLeftRight
+  , padRight
+  , str
+  , vBox
+  , withAttr
+  , withBorderStyle
+  )
 import Control.Lens.Combinators (imap)
 import Name (Name)
 
@@ -11,6 +26,7 @@ import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
 import qualified Graphics.Vty as V
 import qualified Reducer as R
+import Text.Printf (printf)
 
 -- DRAWING
 drawUI :: R.AppState -> [Widget Name]
@@ -23,15 +39,19 @@ drawUI g =
     appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ w]
 
 drawGame :: R.AppState -> Widget Name
-drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} = hBox [wInfo, wGoBoard, wCmd]
+drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} =
+  hBox [padLeftRight 2 wInfo, wGoBoard, padLeftRight 2 wCmd]
   where
     wCmd :: Widget Name
     wCmd = str "Cmd"
     wInfo :: Widget Name
     wInfo = str "info"
     wGoBoard :: Widget Name
-    wGoBoard = vBox $ imap cellsInRow grd
-    cellsInRow y r = hBox $ imap (drawCell y) r
+    wGoBoard = vBox $ [hBox $ map (\s -> str s) boarderY] ++ imap cellsInRow grd ++ [hBox $ map (\s -> str s) boarderY]
+    boarderY = ["   "] ++ (map (\i -> padIntStr i) [0 .. 18]) ++ ["  "]
+    padIntStr :: Int -> String
+    padIntStr = printf " %.2d"
+    cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ padIntStr y]
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
       if crv && cx == x && cy == y
