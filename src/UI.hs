@@ -17,14 +17,14 @@ import qualified Reducer as R
 drawUI :: R.AppState -> [Widget Name]
 drawUI g =
   case g of
-    R.GameState {} -> [C.center $ drawGame g]
+    R.GameState {} -> drawGame g
     R.Home mode -> drawHome mode
     R.SoloSelectPlayer p -> drawSoloSelectPlayer p
 
-drawGame :: R.AppState -> Widget Name
-drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
-  withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
+drawGame :: R.AppState -> [Widget Name]
+drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} = [C.center $ drawGrid g]
   where
+    drawGrid g = withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
     rows = imap cellsInRow grd
     cellsInRow y r = hBox $ imap (drawCell cr crv y) r
     drawCell :: (Int, Int) -> Bool -> Int -> Int -> R.Cell -> Widget Name
