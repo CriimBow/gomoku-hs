@@ -40,7 +40,7 @@ drawUI g =
     appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") w]
 
 drawGame :: R.AppState -> Widget Name
-drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} =
+drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv, R.playerTurn = plTurn} =
   hBox [padLeftRight 2 wInfo, wGoBoard, padLeftRight 2 wCmd]
   where
     wCmd :: Widget Name
@@ -56,8 +56,9 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
       if crv && cx == x && cy == y
-        then case cell of
-               R.EmptyCell -> withAttr cursorGoodAttr $ str "(#)" -- "() "
+        then case (cell, plTurn) of
+               (R.EmptyCell, R.PlayerBlack) -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
+               (R.EmptyCell, R.PlayerWhite) -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
                _ -> withAttr cursorBadAttr $ str "(#)" -- "() "
         else case cell of
                R.PieceWhite -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "

@@ -9,8 +9,10 @@ data AppState
   = GameState { goGrid :: [[Cell]] -- go grid with piece
               , gameMode :: GameMode -- solo or tow player
               , playerTurn :: Player -- turn of player
+              , lastIATimeForPlay :: Float -- time for IA play
+              , cursorSuggestion :: Maybe Coord -- suggestion IA
               , cursor :: Coord -- user cursor for play
-              , cursorVisible :: Bool -- cursor alternator
+              , cursorVisible :: Bool -- cursor visibility alternator
                }
   | Home GameMode
   | SoloSelectPlayer Player
@@ -40,6 +42,8 @@ initGameState mode =
     { goGrid = [[EmptyCell | i <- [1 .. hGoGrid]] | j <- [1 .. hGoGrid]]
     , gameMode = mode
     , playerTurn = PlayerWhite
+    , lastIATimeForPlay = 0.0
+    , cursorSuggestion = Nothing
     , cursor = (9, 9)
     , cursorVisible = True
     }
@@ -73,6 +77,9 @@ playerPlay s =
       if cx == x && cy == y
         then playerToPiece $ playerTurn s
         else c
+
+suggestionPlay :: AppState -> AppState
+suggestionPlay s = s
 
 -- UTIL
 playerToPiece :: Player -> Cell
