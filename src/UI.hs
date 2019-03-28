@@ -18,6 +18,8 @@ drawUI :: R.AppState -> [Widget Name]
 drawUI g =
   case g of
     R.GameState {} -> [C.center $ drawGame g]
+    R.Home mode -> drawHome mode
+    R.SoloSelectPlayer p -> drawSoloSelectPlayer p
 
 drawGame :: R.AppState -> Widget Name
 drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
@@ -33,9 +35,15 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
                R.PieceWhite -> withAttr pieceWhiteAttr cw
                R.PieceBlack -> withAttr pieceBlackAttr cw
                R.EmptyCell -> withAttr emptyAttr cw
+      where
+        cw :: Widget Name
+        cw = str "  "
 
-cw :: Widget Name
-cw = str "  "
+drawHome :: R.GameMode -> [Widget Name]
+drawHome mode = []
+
+drawSoloSelectPlayer :: R.Player -> [Widget Name]
+drawSoloSelectPlayer p = []
 
 -- ATTR MAP
 theMap :: AttrMap
