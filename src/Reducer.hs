@@ -49,9 +49,8 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
--- {goGrid = imap (upRow cr) (goGrid s), playerTurn = nextPlayer (playerTurn s)}
-playerPlayPiece :: AppState -> AppState
-playerPlayPiece s =
+playerPlay :: AppState -> AppState
+playerPlay s =
   let GameState {cursor = (cx, cy), goGrid = grd} = s
       cellCr = grd !! cy !! cx
    in case cellCr of

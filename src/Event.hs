@@ -35,7 +35,7 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'a') [])) =
   continue $
   case g of
-    R.GameState {} -> R.playerPlayPiece g
+    R.GameState {} -> R.playerPlay g
     _ -> g
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
