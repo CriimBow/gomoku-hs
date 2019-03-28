@@ -41,32 +41,29 @@ data CursorDir
   | CursorRight
   | CursorLeft
 
-moveCursor :: AppState -> CursorDir -> AppState
-moveCursor s d =
-  case s of
-    GameState {cursor = (x, y)} -> s {cursor = upCoord d x y}
-    _ -> s
-  where
-    upCoord d x y =
-      case d of
-        CursorUp -> (x, (y - 1) `mod` hGoGrid)
-        CursorDown -> (x, (y + 1) `mod` hGoGrid)
-        CursorRight -> ((x + 1) `mod` hGoGrid, y)
-        CursorLeft -> ((x - 1) `mod` hGoGrid, y)
+moveCursor :: AppState -> CursorDir -> (Int, Int)
+moveCursor GameState {cursor = (x, y)} d =
+  case d of
+    CursorUp -> (x, (y - 1) `mod` hGoGrid)
+    CursorDown -> (x, (y + 1) `mod` hGoGrid)
+    CursorRight -> ((x + 1) `mod` hGoGrid, y)
+    CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
-placePiece :: AppState -> AppState
-placePiece s =
-  case s of
-    GameState {cursor = cr} -> s {goGrid = imap (upRow cr) (goGrid s), playerTurn = nextPlayer (playerTurn s)}
-    _ -> s
+-- {goGrid = imap (upRow cr) (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+playerPlayPiece :: AppState -> AppState
+playerPlayPiece s =
+  let GameState {cursor = (cx, cy), goGrid = grd} = s
+      cellCr = grd !! cy !! cx
+   in case cellCr of
+        EmptyCell -> s {goGrid = imap (upRow (cx, cy)) (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+        _ -> s
   where
     upRow :: (Int, Int) -> Int -> [Cell] -> [Cell]
     upRow cr y = imap (upCell cr y)
-    upCell (cx, cy) y x EmptyCell =
+    upCell (cx, cy) y x c =
       if cx == x && cy == y
         then playerToPiece $ playerTurn s
-        else EmptyCell
-    upCell _ _ _ c = c
+        else c
 
 -- UTIL
 playerToPiece :: Player -> Cell
