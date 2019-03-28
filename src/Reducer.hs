@@ -56,16 +56,23 @@ moveCursor s d =
 
 placePiece :: AppState -> AppState
 placePiece s =
-  let playerToPiece PlayerWhite = PieceWhite
-      playerToPiece PlayerBlack = PieceBlack
-      nextPlayer PlayerWhite = PlayerBlack
-      nextPlayer PlayerBlack = PlayerWhite
-      (cx, cy) = cursor s
-      upRow :: Int -> [Cell] -> [Cell]
-      upRow y = imap (upCell y)
-      upCell y x EmptyCell =
-        if cx == x && cy == y
-          then playerToPiece $ playerTurn s
-          else EmptyCell
-      upCell _ _ c = c
-   in s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+  case s of
+    GameState {cursor = (cx, cy)} ->
+      let upRow :: Int -> [Cell] -> [Cell]
+          upRow y = imap (upCell y)
+          upCell y x EmptyCell =
+            if cx == x && cy == y
+              then playerToPiece $ playerTurn s
+              else EmptyCell
+          upCell _ _ c = c
+       in s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+    _ -> s
+
+-- UTIL
+playerToPiece :: Player -> Cell
+playerToPiece PlayerWhite = PieceWhite
+playerToPiece PlayerBlack = PieceBlack
+
+nextPlayer :: Player -> Player
+nextPlayer PlayerWhite = PlayerBlack
+nextPlayer PlayerBlack = PlayerWhite

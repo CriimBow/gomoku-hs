@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds #-}
 
 module UI where
 
@@ -14,23 +15,24 @@ import qualified Reducer as R
 
 -- DRAWING
 drawUI :: R.AppState -> [Widget Name]
-drawUI g = [C.center $ drawGrid g]
+drawUI g =
+  case g of
+    R.GameState {} -> [C.center $ drawGame g]
 
-drawGrid :: R.AppState -> Widget Name
-drawGrid R.AppState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
+drawGame :: R.AppState -> Widget Name
+drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} =
   withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
   where
     rows = imap cellsInRow grd
     cellsInRow y r = hBox $ imap (drawCell cr crv y) r
-
-drawCell :: (Int, Int) -> Bool -> Int -> Int -> R.Cell -> Widget Name
-drawCell (cx, cy) crv y x cell =
-  if crv && cx == x && cy == y
-    then withAttr cursorAttr cw
-    else case cell of
-           R.PieceWhite -> withAttr pieceWhiteAttr cw
-           R.PieceBlack -> withAttr pieceBlackAttr cw
-           R.EmptyCell -> withAttr emptyAttr cw
+    drawCell :: (Int, Int) -> Bool -> Int -> Int -> R.Cell -> Widget Name
+    drawCell (cx, cy) crv y x cell =
+      if crv && cx == x && cy == y
+        then withAttr cursorAttr cw
+        else case cell of
+               R.PieceWhite -> withAttr pieceWhiteAttr cw
+               R.PieceBlack -> withAttr pieceBlackAttr cw
+               R.EmptyCell -> withAttr emptyAttr cw
 
 cw :: Widget Name
 cw = str "  "
