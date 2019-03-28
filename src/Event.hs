@@ -1,6 +1,7 @@
 module Event where
 
 import Brick (BrickEvent(..), EventM, Next, continue, halt)
+import Control.Monad.IO.Class (liftIO)
 import Name (Name)
 
 import qualified Graphics.Vty as V
@@ -48,10 +49,9 @@ handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
         R.GameMulti -> R.initGameState R.GameMulti
     R.SoloSelectPlayer p -> R.initGameState (R.GameSolo p)
 handleEvent g (VtyEvent (V.EvKey (V.KChar 's') [])) =
-  continue $
   case g of
-    R.GameState {} -> R.suggestionPlay g
-    _ -> g
+    R.GameState {} -> liftIO (R.suggestionPlay g) >>= continue
+    _ -> continue g
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g

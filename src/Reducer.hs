@@ -3,13 +3,14 @@ module Reducer where
 import Constant (hGoGrid)
 import Control.Lens.Combinators (imap)
 import System.Random (Random(..), newStdGen)
+import System.CPUTime
 
 -- TYPES STATE
 data AppState
   = GameState { goGrid :: [[Cell]] -- go grid with piece
               , gameMode :: GameMode -- solo or tow player
               , playerTurn :: Player -- turn of player
-              , lastIATimeForPlay :: Float -- time for IA play
+              , lastIATimeForPlay :: Double -- time for IA play
               , cursorSuggestion :: Maybe Coord -- suggestion IA
               , cursor :: Coord -- user cursor for play
               , cursorVisible :: Bool -- cursor visibility alternator
@@ -78,8 +79,14 @@ playerPlay s =
         then playerToPiece $ playerTurn s
         else c
 
-suggestionPlay :: AppState -> AppState
-suggestionPlay s = s
+suggestionPlay :: AppState -> IO AppState
+suggestionPlay s = do
+  let GameState {goGrid = grd, playerTurn = plTrn} = s
+  start <- getCPUTime
+  let coord = solver grd plTrn
+  end <- getCPUTime
+  let diff = fromIntegral (end - start) / (10 ^ 9)
+  return s {lastIATimeForPlay = diff, cursorSuggestion = Just coord}
 
 -- UTIL
 playerToPiece :: Player -> Cell
@@ -89,3 +96,7 @@ playerToPiece PlayerBlack = PieceBlack
 nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
+
+-- SOLVER
+solver :: [[Cell]] -> Player -> Coord
+solver grd p = (0, 0) -- TODO

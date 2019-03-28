@@ -41,7 +41,7 @@ drawUI g =
 
 drawGame :: R.AppState -> Widget Name
 drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv, R.playerTurn = plTurn} =
-  hBox [padLeftRight 2 wInfo, wGoBoard, padLeftRight 2 wCmd]
+  hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
   where
     wCmd :: Widget Name
     wCmd = str "Cmd"
