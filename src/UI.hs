@@ -2,7 +2,7 @@
 
 module UI where
 
-import Brick (AttrMap, AttrName, Widget, attrMap, hBox, on, str, vBox, withAttr, withBorderStyle)
+import Brick (AttrMap, AttrName, Widget, attrMap, bg, hBox, on, str, vBox, withAttr, withBorderStyle)
 import Control.Lens.Combinators (imap)
 import Name (Name)
 
@@ -37,13 +37,17 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
       where
         cw :: Widget Name
         cw = str "  "
-drawGame _ = []
 
 drawHome :: R.GameMode -> [Widget Name]
-drawHome mode = []
+drawHome mode = [hBox wg]
+  where
+    wg =
+      case mode of
+        R.GameSolo p -> [withAttr selected $ str "Solo", str " ", str "Multi"]
+        R.GameMulti -> [str "Solo", str " ", withAttr selected $ str "Multi"]
 
 drawSoloSelectPlayer :: R.Player -> [Widget Name]
-drawSoloSelectPlayer p = []
+drawSoloSelectPlayer p = [vBox [(str "test 1"), (str "test 2")]]
 
 -- ATTR MAP
 theMap :: AttrMap
@@ -54,6 +58,7 @@ theMap =
     , (pieceWhiteAttr, V.white `on` V.white)
     , (cursorAttr, V.green `on` V.green)
     , (emptyAttr, V.blue `on` V.blue)
+    , (selected, V.black `on` V.white)
     ]
 
 pieceBlackAttr :: AttrName
@@ -67,3 +72,6 @@ cursorAttr = "cursorAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
+
+selected :: AttrName
+selected = "selected"
