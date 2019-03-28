@@ -30,19 +30,23 @@ handleEvent g (VtyEvent (V.EvKey V.KRight [])) =
   continue $
   case g of
     R.GameState {} -> g {R.cursor = R.moveCursor g R.CursorRight}
-    R.Home mode -> R.Home R.GameMulti
-    _ -> g
+    R.Home _ -> R.Home R.GameMulti
+    R.SoloSelectPlayer _ -> R.SoloSelectPlayer R.PlayerBlack
 handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
   continue $
   case g of
     R.GameState {} -> g {R.cursor = R.moveCursor g R.CursorLeft}
-    R.Home mode -> R.Home (R.GameSolo R.PlayerWhite)
-    _ -> g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'a') [])) =
+    R.Home _ -> R.Home (R.GameSolo R.PlayerWhite)
+    R.SoloSelectPlayer _ -> R.SoloSelectPlayer R.PlayerWhite
+handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   continue $
   case g of
     R.GameState {} -> R.playerPlay g
-    _ -> g
+    R.Home mode ->
+      case mode of
+        R.GameSolo _ -> R.SoloSelectPlayer R.PlayerWhite
+        R.GameMulti -> R.initGameState R.GameMulti
+    R.SoloSelectPlayer p -> R.initGameState (R.GameSolo p)
 handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g

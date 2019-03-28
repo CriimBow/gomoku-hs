@@ -47,7 +47,12 @@ drawHome mode = [hBox wg]
         R.GameMulti -> [str "Solo", str " ", withAttr selected $ str "Multi"]
 
 drawSoloSelectPlayer :: R.Player -> [Widget Name]
-drawSoloSelectPlayer p = [vBox [(str "test 1"), (str "test 2")]]
+drawSoloSelectPlayer p = [hBox wg]
+  where
+    wg =
+      case p of
+        R.PlayerWhite -> [withAttr selected $ str "White", str " ", str "Black"]
+        R.PlayerBlack -> [str "White", str " ", withAttr selected $ str "Black"]
 
 -- ATTR MAP
 theMap :: AttrMap

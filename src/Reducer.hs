@@ -34,6 +34,16 @@ data GameMode
 initState :: AppState
 initState = Home (GameSolo PlayerWhite)
 
+initGameState :: GameMode -> AppState
+initGameState mode =
+  GameState
+    { goGrid = [[EmptyCell | i <- [1 .. hGoGrid]] | j <- [1 .. hGoGrid]]
+    , gameMode = mode
+    , playerTurn = PlayerWhite
+    , cursor = (9, 9)
+    , cursorVisible = True
+    }
+
 -- UPDATE STATE
 data CursorDir
   = CursorUp
