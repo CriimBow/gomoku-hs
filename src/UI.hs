@@ -10,6 +10,7 @@ import Brick
   , bg
   , hBox
   , on
+  , padAll
   , padLeft
   , padLeftRight
   , padRight
@@ -70,16 +71,16 @@ drawHome mode = hBox wg
   where
     wg =
       case mode of
-        R.GameSolo p -> [withAttr selected $ str "Solo", str " ", str "Multi"]
-        R.GameMulti -> [str "Solo", str " ", withAttr selected $ str "Multi"]
+        R.GameSolo p -> [padAll 1 $ withAttr selected $ str "Solo", padAll 1 $ str "Multi"]
+        R.GameMulti -> [padAll 1 $ str "Solo", padAll 1 $ withAttr selected $ str "Multi"]
 
 drawSoloSelectPlayer :: R.Player -> Widget Name
-drawSoloSelectPlayer p = hBox wg
+drawSoloSelectPlayer p = vBox [padAll 1 $ str "What do you want to play ?", hBox wg]
   where
     wg =
       case p of
-        R.PlayerWhite -> [withAttr selected $ str "White (1st)", str " ", str "Black (2nd)"]
-        R.PlayerBlack -> [str "White (1st)", str " ", withAttr selected $ str "Black (2nd)"]
+        R.PlayerWhite -> [padAll 1 $ withAttr selected $ str "White (1st)", str "  ", padAll 1 $ str "Black (2nd)"]
+        R.PlayerBlack -> [padAll 1 $ str "White (1st)", str "  ", padAll 1 $ withAttr selected $ str "Black (2nd)"]
 
 -- ATTR MAP
 theMap :: AttrMap
