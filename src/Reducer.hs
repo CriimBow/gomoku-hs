@@ -2,8 +2,8 @@ module Reducer where
 
 import Constant (hGoGrid)
 import Control.Lens.Combinators (imap)
-import System.Random (Random(..), newStdGen)
 import System.CPUTime
+import System.Random (Random(..), newStdGen)
 
 -- TYPES STATE
 data AppState

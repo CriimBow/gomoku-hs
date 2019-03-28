@@ -40,13 +40,18 @@ drawUI g =
     appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") w]
 
 drawGame :: R.AppState -> Widget Name
-drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv, R.playerTurn = plTurn} =
-  hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
+drawGame R.GameState { R.goGrid = grd
+                     , R.cursor = (cx, cy)
+                     , R.cursorVisible = crv
+                     , R.playerTurn = plTurn
+                     , R.lastIATimeForPlay = lstTimCmp
+                     , R.cursorSuggestion = sugCrd
+                     } = hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
   where
     wCmd :: Widget Name
     wCmd = str "Cmd"
     wInfo :: Widget Name
-    wInfo = str "info"
+    wInfo = vBox [str "info", str "time of last computation:", str $ printf "%f ms" lstTimCmp]
     wGoBoard :: Widget Name
     wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]
     boarderY = ["   "] ++ map padIntStr [0 .. 18] ++ [" "]
@@ -55,15 +60,24 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ padIntStr y]
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
-      if crv && cx == x && cy == y
-        then case (cell, plTurn) of
-               (R.EmptyCell, R.PlayerBlack) -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
-               (R.EmptyCell, R.PlayerWhite) -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
-               _ -> withAttr cursorBadAttr $ str "(#)" -- "() "
-        else case cell of
-               R.PieceWhite -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
-               R.PieceBlack -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
-               R.EmptyCell -> withAttr emptyAttr cw
+      if crv
+        then if cx == x && cy == y
+               then case (cell, plTurn) of
+                      (R.EmptyCell, R.PlayerBlack) -> pieceToWiget R.PieceBlack
+                      (R.EmptyCell, R.PlayerWhite) -> pieceToWiget R.PieceWhite
+                      _ -> withAttr cursorBadAttr $ str "(#)" -- "() "
+               else case sugCrd of
+                      Just (csx, csy) ->
+                        if csx == x && csy == y
+                          then withAttr suggestionAttr $ str "(#)" -- "() "
+                          else pieceToWiget cell
+                      Nothing -> pieceToWiget cell
+        else pieceToWiget cell
+    pieceToWiget p =
+      case p of
+        R.PieceWhite -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
+        R.PieceBlack -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
+        R.EmptyCell -> withAttr emptyAttr cw
     cw :: Widget Name
     cw = str "   "
 
@@ -72,16 +86,16 @@ drawHome mode = hBox wg
   where
     wg =
       case mode of
-        R.GameSolo p -> [padAll 1 $ withAttr selected $ str "Solo", padAll 1 $ str "Multi"]
-        R.GameMulti -> [padAll 1 $ str "Solo", padAll 1 $ withAttr selected $ str "Multi"]
+        R.GameSolo p -> [padAll 1 $ withAttr selectedAttr $ str "Solo", padAll 1 $ str "Multi"]
+        R.GameMulti -> [padAll 1 $ str "Solo", padAll 1 $ withAttr selectedAttr $ str "Multi"]
 
 drawSoloSelectPlayer :: R.Player -> Widget Name
 drawSoloSelectPlayer p = vBox [padAll 1 $ str "What do you want to play ?", hBox wg]
   where
     wg =
       case p of
-        R.PlayerWhite -> [padAll 1 $ withAttr selected $ str "White (1st)", str "  ", padAll 1 $ str "Black (2nd)"]
-        R.PlayerBlack -> [padAll 1 $ str "White (1st)", str "  ", padAll 1 $ withAttr selected $ str "Black (2nd)"]
+        R.PlayerWhite -> [padAll 1 $ withAttr selectedAttr $ str "White (1st)", str "  ", padAll 1 $ str "Black (2nd)"]
+        R.PlayerBlack -> [padAll 1 $ str "White (1st)", str "  ", padAll 1 $ withAttr selectedAttr $ str "Black (2nd)"]
 
 -- ATTR MAP
 theMap :: AttrMap
@@ -90,10 +104,10 @@ theMap =
     V.defAttr
     [ (pieceBlackAttr, V.black `on` V.yellow `V.withStyle` V.bold)
     , (pieceWhiteAttr, V.white `on` V.yellow `V.withStyle` V.bold)
-    , (cursorGoodAttr, V.green `on` V.yellow)
-    , (cursorBadAttr, V.red `on` V.yellow)
+    , (cursorBadAttr, V.red `on` V.yellow `V.withStyle` V.bold)
+    , (suggestionAttr, V.cyan `on` V.yellow `V.withStyle` V.bold)
     , (emptyAttr, V.yellow `on` V.yellow)
-    , (selected, V.black `on` V.white)
+    , (selectedAttr, V.black `on` V.white)
     ]
 
 pieceBlackAttr :: AttrName
@@ -102,14 +116,14 @@ pieceBlackAttr = "gameOver"
 pieceWhiteAttr :: AttrName
 pieceWhiteAttr = "snakeAttr"
 
-cursorGoodAttr :: AttrName
-cursorGoodAttr = "cursorGoodAttr"
-
 cursorBadAttr :: AttrName
 cursorBadAttr = "cursorBadAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
 
-selected :: AttrName
-selected = "selected"
+selectedAttr :: AttrName
+selectedAttr = "selected"
+
+suggestionAttr :: AttrName
+suggestionAttr = "suggestion"

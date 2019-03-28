@@ -5,6 +5,10 @@
 - ghc
 - stack
 
+## Lib
+
+- Brick
+
 ## Run
 
 ```
