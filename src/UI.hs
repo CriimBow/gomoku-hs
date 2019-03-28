@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DataKinds #-}
 
 module UI where
 
@@ -17,18 +16,18 @@ import qualified Reducer as R
 drawUI :: R.AppState -> [Widget Name]
 drawUI g =
   case g of
-    R.GameState {} -> drawGame g
-    R.Home mode -> drawHome mode
-    R.SoloSelectPlayer p -> drawSoloSelectPlayer p
+    R.GameState {} -> appBox $ drawGame g
+    R.Home mode -> appBox $ drawHome mode
+    R.SoloSelectPlayer p -> appBox $ drawSoloSelectPlayer p
+  where
+    appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox w]
 
 drawGame :: R.AppState -> [Widget Name]
-drawGame R.GameState {R.goGrid = grd, R.cursor = cr, R.cursorVisible = crv} = [C.center $ drawGrid g]
+drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} = imap cellsInRow grd
   where
-    drawGrid g = withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ vBox rows
-    rows = imap cellsInRow grd
-    cellsInRow y r = hBox $ imap (drawCell cr crv y) r
-    drawCell :: (Int, Int) -> Bool -> Int -> Int -> R.Cell -> Widget Name
-    drawCell (cx, cy) crv y x cell =
+    cellsInRow y r = hBox $ imap (drawCell y) r
+    drawCell :: Int -> Int -> R.Cell -> Widget Name
+    drawCell y x cell =
       if crv && cx == x && cy == y
         then withAttr cursorAttr cw
         else case cell of

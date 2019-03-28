@@ -7,10 +7,10 @@ import qualified Graphics.Vty as V
 import qualified Reducer as R
 
 -- EVENTS
-data Tick =
+data CustomEvent =
   Tick
 
-handleEvent :: R.AppState -> BrickEvent Name Tick -> EventM Name (Next R.AppState)
+handleEvent :: R.AppState -> BrickEvent Name CustomEvent -> EventM Name (Next R.AppState)
 handleEvent g (AppEvent Tick) = continue $ g {R.cursorVisible = not (R.cursorVisible g)}
 handleEvent g (VtyEvent (V.EvKey V.KUp [])) =
   continue $

@@ -14,7 +14,7 @@ import qualified Reducer as R
 import qualified UI as U
 
 -- MAIN APP
-app :: App R.AppState E.Tick Name
+app :: App R.AppState E.CustomEvent Name
 app =
   App
     { appDraw = U.drawUI
