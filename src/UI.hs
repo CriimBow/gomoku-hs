@@ -36,7 +36,7 @@ drawUI g =
     R.Home mode -> appBox $ drawHome mode
     R.SoloSelectPlayer p -> appBox $ drawSoloSelectPlayer p
   where
-    appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") $ w]
+    appBox w = [C.center $ withBorderStyle BS.unicodeBold $ B.borderWithLabel (str "Gomoku") w]
 
 drawGame :: R.AppState -> Widget Name
 drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv} =
@@ -48,7 +48,7 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     wInfo = str "info"
     wGoBoard :: Widget Name
     wGoBoard = vBox $ [hBox $ map (\s -> str s) boarderY] ++ imap cellsInRow grd ++ [hBox $ map (\s -> str s) boarderY]
-    boarderY = ["   "] ++ (map (\i -> padIntStr i) [0 .. 18]) ++ ["  "]
+    boarderY = ["   "] ++ map padIntStr [0 .. 18] ++ [" "]
     padIntStr :: Int -> String
     padIntStr = printf " %.2d"
     cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ padIntStr y]
