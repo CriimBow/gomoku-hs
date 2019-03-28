@@ -55,13 +55,15 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
       if crv && cx == x && cy == y
-        then withAttr cursorAttr cw
+        then case cell of
+               R.EmptyCell -> withAttr cursorGoodAttr $ str "() "
+               _ -> withAttr cursorBadAttr $ str "() "
         else case cell of
-               R.PieceWhite -> withAttr pieceWhiteAttr cw
-               R.PieceBlack -> withAttr pieceBlackAttr cw
+               R.PieceWhite -> withAttr pieceWhiteAttr $ str "⚪  "
+               R.PieceBlack -> withAttr pieceBlackAttr $ str "⚫  "
                R.EmptyCell -> withAttr emptyAttr cw
     cw :: Widget Name
-    cw = str "   " -- ●
+    cw = str "   "
 
 drawHome :: R.GameMode -> Widget Name
 drawHome mode = hBox wg
@@ -84,9 +86,10 @@ theMap :: AttrMap
 theMap =
   attrMap
     V.defAttr
-    [ (pieceBlackAttr, V.black `on` V.black)
-    , (pieceWhiteAttr, V.white `on` V.white)
-    , (cursorAttr, V.yellow `on` V.cyan)
+    [ (pieceBlackAttr, V.black `on` V.yellow `V.withStyle` V.bold)
+    , (pieceWhiteAttr, V.white `on` V.yellow `V.withStyle` V.bold)
+    , (cursorGoodAttr, V.green `on` V.yellow)
+    , (cursorBadAttr, V.red `on` V.yellow)
     , (emptyAttr, V.yellow `on` V.yellow)
     , (selected, V.black `on` V.white)
     ]
@@ -97,8 +100,11 @@ pieceBlackAttr = "gameOver"
 pieceWhiteAttr :: AttrName
 pieceWhiteAttr = "snakeAttr"
 
-cursorAttr :: AttrName
-cursorAttr = "cursorAttr"
+cursorGoodAttr :: AttrName
+cursorGoodAttr = "cursorGoodAttr"
+
+cursorBadAttr :: AttrName
+cursorBadAttr = "cursorBadAttr"
 
 emptyAttr :: AttrName
 emptyAttr = "emptyAttr"
