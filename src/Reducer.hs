@@ -5,12 +5,15 @@ import Control.Lens.Combinators (imap)
 import System.Random (Random(..), newStdGen)
 
 -- TYPES STATE
-data AppState = AppState
-  { goGrid :: [[Cell]] -- go grid with piece
-  , cursor :: Coord -- user cursor for play
-  , cursorVisible :: Bool -- cursor alternator
-  , playerTurn :: Player -- turn of player
-  }
+data AppState
+  = GameState { goGrid :: [[Cell]] -- go grid with piece
+              , gameMode :: GameMode -- solo or tow player
+              , playerTurn :: Player -- turn of player
+              , cursor :: Coord -- user cursor for play
+              , cursorVisible :: Bool -- cursor alternator
+               }
+  | Home GameMode
+  | SoloSelectPlayer Player
 
 type Coord = (Int, Int)
 
@@ -23,15 +26,13 @@ data Player
   = PlayerWhite
   | PlayerBlack
 
+data GameMode
+  = GameSolo Player
+  | GameMulti
+
 -- INIT STATE
 initState :: AppState
-initState =
-  AppState
-    { goGrid = [[EmptyCell | j <- [1 .. hGoGrid]] | i <- [1 .. hGoGrid]]
-    , cursor = (0, 0)
-    , cursorVisible = False
-    , playerTurn = PlayerWhite
-    }
+initState = Home (GameSolo PlayerWhite)
 
 -- UPDATE STATE
 data CursorDir
@@ -42,14 +43,16 @@ data CursorDir
 
 moveCursor :: AppState -> CursorDir -> AppState
 moveCursor s d =
-  let AppState {cursor = (x, y)} = s
-      coord =
-        case d of
-          CursorUp -> (x, (y - 1) `mod` hGoGrid)
-          CursorDown -> (x, (y + 1) `mod` hGoGrid)
-          CursorRight -> ((x + 1) `mod` hGoGrid, y)
-          CursorLeft -> ((x - 1) `mod` hGoGrid, y)
-   in s {cursor = coord}
+  case s of
+    GameState {cursor = (x, y)} ->
+      let coord =
+            case d of
+              CursorUp -> (x, (y - 1) `mod` hGoGrid)
+              CursorDown -> (x, (y + 1) `mod` hGoGrid)
+              CursorRight -> ((x + 1) `mod` hGoGrid, y)
+              CursorLeft -> ((x - 1) `mod` hGoGrid, y)
+       in s {cursor = coord}
+    _ -> s
 
 placePiece :: AppState -> AppState
 placePiece s =
