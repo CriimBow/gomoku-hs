@@ -48,7 +48,7 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     wInfo :: Widget Name
     wInfo = str "info"
     wGoBoard :: Widget Name
-    wGoBoard = vBox $ [hBox $ map (\s -> str s) boarderY] ++ imap cellsInRow grd ++ [hBox $ map (\s -> str s) boarderY]
+    wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]
     boarderY = ["   "] ++ map padIntStr [0 .. 18] ++ [" "]
     padIntStr :: Int -> String
     padIntStr = printf " %.2d"
@@ -57,11 +57,11 @@ drawGame R.GameState {R.goGrid = grd, R.cursor = (cx, cy), R.cursorVisible = crv
     drawCell y x cell =
       if crv && cx == x && cy == y
         then case cell of
-               R.EmptyCell -> withAttr cursorGoodAttr $ str "() "
-               _ -> withAttr cursorBadAttr $ str "() "
+               R.EmptyCell -> withAttr cursorGoodAttr $ str "(#)" -- "() "
+               _ -> withAttr cursorBadAttr $ str "(#)" -- "() "
         else case cell of
-               R.PieceWhite -> withAttr pieceWhiteAttr $ str "⚪  "
-               R.PieceBlack -> withAttr pieceBlackAttr $ str "⚫  "
+               R.PieceWhite -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
+               R.PieceBlack -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
                R.EmptyCell -> withAttr emptyAttr cw
     cw :: Widget Name
     cw = str "   "
