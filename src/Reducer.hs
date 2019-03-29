@@ -89,21 +89,23 @@ handelPlayCoord cr s =
   case end s of
     Nothing ->
       if valideCoord cr (goGrid s)
-        then let nwS = checkEnd $ posePiece cr s
+        then let nwS = checkEnd $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
               in nwS {playerTurn = nextPlayer (playerTurn s)}
         else s
     _ -> s
 
-posePiece :: Coord -> AppState -> AppState
-posePiece (cx, cy) s = s {goGrid = todoGrid}
+posePiece :: Coord -> Player -> [[Cell]] -> [[Cell]]
+posePiece (cx, cy) p grd = imap upRow grd
   where
-    todoGrid = imap upRow (goGrid s) -- Del piece
     upRow :: Int -> [Cell] -> [Cell]
     upRow y = imap (upCell y)
     upCell y x c =
       if cx == x && cy == y
-        then playerToPiece (playerTurn s)
+        then playerToPiece p
         else c
+
+checkCaptur :: Coord -> AppState -> AppState -- TODO
+checkCaptur cr s = s
 
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
@@ -141,7 +143,10 @@ valideCoord :: Coord -> [[Cell]] -> Bool
 valideCoord (cx, cy) grd = valideCoords grd !! cy !! cx
 
 checkEnd :: AppState -> AppState -- TODO
-checkEnd s = s
+checkEnd s
+  | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
+  | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
+  | otherwise = s
 
 -- SOLVER
 solver :: [[Cell]] -> Player -> Maybe Coord -- TODO
