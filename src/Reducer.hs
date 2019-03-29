@@ -69,7 +69,12 @@ playerPlay s =
   let GameState {cursor = (cx, cy), goGrid = grd} = s
       cellCr = grd !! cy !! cx
    in case cellCr of
-        EmptyCell -> s {goGrid = imap (upRow (cx, cy)) (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+        EmptyCell ->
+          s
+            { goGrid = imap (upRow (cx, cy)) (goGrid s)
+            , playerTurn = nextPlayer (playerTurn s)
+            , cursorSuggestion = Nothing
+            }
         _ -> s
   where
     upRow :: (Int, Int) -> Int -> [Cell] -> [Cell]
