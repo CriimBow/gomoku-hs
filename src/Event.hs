@@ -3,6 +3,7 @@ module Event where
 import Brick (BrickEvent(..), EventM, Next, continue, halt)
 import Control.Monad.IO.Class (liftIO)
 import Name (Name)
+import System.CPUTime
 
 import qualified Graphics.Vty as V
 import qualified Reducer as R
@@ -40,41 +41,20 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
     R.Home _ -> R.Home (R.GameSolo R.PlayerWhite)
     R.SoloSelectPlayer _ -> R.SoloSelectPlayer R.PlayerWhite
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
-  continue $
   case g of
     R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn} ->
       case R.posePiece (R.cursor g) (R.playerTurn g) (R.goGrid g) of
-        Nothing -> g
+        Nothing -> continue g
         Just grd ->
-          case gmdMd of
-            R.GameMulti ->
-              g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
-            R.GameSolo p ->
-              let gTmp =
-                    if p == plTrn
-                      then g
-                             { R.goGrid = grd
-                             , R.playerTurn = R.nextPlayer (R.playerTurn g)
-                             , R.cursorSuggestion = Nothing
-                             }
-                      else g
-               in case R.solver (R.goGrid gTmp) (R.playerTurn gTmp) -- TODO time
-                        of
-                    Nothing -> gTmp
-                    Just cod ->
-                      case R.posePiece cod (R.playerTurn gTmp) (R.goGrid gTmp) of
-                        Nothing -> gTmp
-                        Just newGrd ->
-                          gTmp
-                            { R.goGrid = newGrd
-                            , R.playerTurn = R.nextPlayer (R.playerTurn gTmp)
-                            , R.cursorSuggestion = Nothing
-                            }
+          let nextG = g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
+           in case gmdMd of
+                R.GameMulti -> continue nextG
+                R.GameSolo p -> liftIO (handelGameSoloPlay p nextG) >>= continue
     R.Home mode ->
       case mode of
-        R.GameSolo _ -> R.SoloSelectPlayer R.PlayerWhite
-        R.GameMulti -> R.initGameState R.GameMulti
-    R.SoloSelectPlayer p -> R.initGameState (R.GameSolo p)
+        R.GameSolo _ -> continue $ R.SoloSelectPlayer R.PlayerWhite
+        R.GameMulti -> continue $ R.initGameState R.GameMulti
+    R.SoloSelectPlayer p -> continue $ R.initGameState (R.GameSolo p)
 handleEvent g (VtyEvent (V.EvKey (V.KChar 's') [])) =
   case g of
     R.GameState {} -> liftIO (R.suggestionPlay g) >>= continue
@@ -85,3 +65,19 @@ handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) =
     _ -> continue $ R.Home (R.GameSolo R.PlayerWhite)
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
+
+handelGameSoloPlay :: R.Player -> R.AppState -> IO R.AppState
+handelGameSoloPlay p s = do
+  start <- getCPUTime
+  let mCoord = R.solver (R.goGrid s) (R.playerTurn s)
+  end <- getCPUTime
+  let diff = fromIntegral (end - start) / (10 ^ 9)
+  let withDiff = s {R.lastIATimeForPlay = diff, R.cursorSuggestion = Nothing}
+  let nGS =
+        case mCoord of
+          Nothing -> withDiff
+          Just cod ->
+            case R.posePiece cod (R.playerTurn withDiff) (R.goGrid withDiff) of
+              Nothing -> withDiff
+              Just newGrd -> withDiff {R.goGrid = newGrd, R.playerTurn = R.nextPlayer (R.playerTurn withDiff)}
+  return nGS
