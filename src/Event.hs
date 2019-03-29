@@ -42,11 +42,34 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   continue $
   case g of
-    R.GameState {} ->
-      let newGrd = R.posePiece (R.cursor g) (R.playerTurn g) (R.goGrid g)
-       in case newGrd of
-            Nothing -> g
-            Just grd -> g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
+    R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn} ->
+      case R.posePiece (R.cursor g) (R.playerTurn g) (R.goGrid g) of
+        Nothing -> g
+        Just grd ->
+          case gmdMd of
+            R.GameMulti ->
+              g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
+            R.GameSolo p ->
+              let gTmp =
+                    if p == plTrn
+                      then g
+                             { R.goGrid = grd
+                             , R.playerTurn = R.nextPlayer (R.playerTurn g)
+                             , R.cursorSuggestion = Nothing
+                             }
+                      else g
+               in case R.solver (R.goGrid gTmp) (R.playerTurn gTmp) -- TODO time
+                        of
+                    Nothing -> gTmp
+                    Just cod ->
+                      case R.posePiece cod (R.playerTurn gTmp) (R.goGrid gTmp) of
+                        Nothing -> gTmp
+                        Just newGrd ->
+                          gTmp
+                            { R.goGrid = newGrd
+                            , R.playerTurn = R.nextPlayer (R.playerTurn gTmp)
+                            , R.cursorSuggestion = Nothing
+                            }
     R.Home mode ->
       case mode of
         R.GameSolo _ -> R.SoloSelectPlayer R.PlayerWhite

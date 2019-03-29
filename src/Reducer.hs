@@ -28,6 +28,7 @@ data Cell
 data Player
   = PlayerWhite
   | PlayerBlack
+  deriving (Eq)
 
 data GameMode
   = GameSolo Player
@@ -40,9 +41,22 @@ initState = Home (GameSolo PlayerWhite)
 initGameState :: GameMode -> AppState
 initGameState mode =
   GameState
-    { goGrid = [[EmptyCell | i <- [1 .. hGoGrid]] | j <- [1 .. hGoGrid]]
+    { goGrid =
+        case mode of
+          GameSolo PlayerBlack ->
+            [ [ if i == 9 && j == 9
+              then PieceWhite
+              else EmptyCell
+            | i <- [1 .. hGoGrid]
+            ]
+            | j <- [1 .. hGoGrid]
+            ]
+          _ -> [[EmptyCell | i <- [1 .. hGoGrid]] | j <- [1 .. hGoGrid]]
     , gameMode = mode
-    , playerTurn = PlayerWhite
+    , playerTurn =
+        case mode of
+          GameSolo PlayerBlack -> PlayerBlack
+          _ -> PlayerWhite
     , lastIATimeForPlay = 0.0
     , cursorSuggestion = Nothing
     , cursor = (9, 9)
@@ -85,7 +99,7 @@ suggestionPlay s = do
   let coord = solver grd plTrn
   end <- getCPUTime
   let diff = fromIntegral (end - start) / (10 ^ 9)
-  return s {lastIATimeForPlay = diff, cursorSuggestion = Just coord}
+  return s {lastIATimeForPlay = diff, cursorSuggestion = coord}
 
 -- UTIL
 playerToPiece :: Player -> Cell
@@ -100,5 +114,5 @@ validePlay :: [[Cell]] -> [[Bool]] -- TODO
 validePlay grd = map (map (\x -> True)) grd
 
 -- SOLVER
-solver :: [[Cell]] -> Player -> Coord
-solver grd p = (0, 0) -- TODO
+solver :: [[Cell]] -> Player -> Maybe Coord
+solver grd p = Just (0, 0) -- TODO
