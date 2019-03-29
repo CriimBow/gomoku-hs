@@ -78,12 +78,8 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
-posePiece :: Coord -> Player -> [[Cell]] -> Maybe [[Cell]] -- TODO del piece ...
-posePiece (cx, cy) p grd =
-  let valideGrd = validePlay grd
-   in if not (valideGrd !! cy !! cx)
-        then Nothing
-        else Just $ imap upRow grd
+handelPlayCoord :: Coord -> Player -> AppState -> AppState
+handelPlayCoord (cx, cy) p s = s {goGrid = imap upRow (goGrid s)}
   where
     upRow :: Int -> [Cell] -> [Cell]
     upRow y = imap (upCell y)
@@ -91,6 +87,17 @@ posePiece (cx, cy) p grd =
       if cx == x && cy == y
         then playerToPiece p
         else c
+
+handelIAPlay :: Player -> AppState -> IO AppState
+handelIAPlay p s = do
+  start <- getCPUTime
+  let mCoord = solver (goGrid s) (playerTurn s)
+  end <- getCPUTime
+  let diff = fromIntegral (end - start) / (10 ^ 9)
+  let withDiff = s {lastIATimeForPlay = diff}
+  case mCoord of
+    Nothing -> return withDiff
+    Just crd -> return (handelPlayCoord crd p withDiff)
 
 suggestionPlay :: AppState -> IO AppState
 suggestionPlay s = do
@@ -110,8 +117,11 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-validePlay :: [[Cell]] -> [[Bool]] -- TODO
-validePlay grd = map (map (\x -> True)) grd
+valideCoords :: [[Cell]] -> [[Bool]] -- TODO
+valideCoords grd = map (map (\x -> True)) grd
+
+valideCoord :: Coord -> [[Cell]] -> Bool
+valideCoord (cx, cy) grd = valideCoords grd !! cy !! cx
 
 -- SOLVER
 solver :: [[Cell]] -> Player -> Maybe Coord

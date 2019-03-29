@@ -43,14 +43,11 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
     R.SoloSelectPlayer _ -> R.SoloSelectPlayer R.PlayerWhite
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   case g of
-    R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn} ->
-      case R.posePiece (R.cursor g) (R.playerTurn g) (R.goGrid g) of
-        Nothing -> continue g
-        Just grd ->
-          let nextG = g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
-           in case gmdMd of
-                R.GameMulti -> continue nextG
-                R.GameSolo p -> liftIO (handelGameSoloPlay p nextG) >>= continue
+    R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn, R.cursor = cr, R.goGrid = grd} ->
+      let nextG = R.handelPlayCoord cr plTrn (g {R.cursorSuggestion = Nothing})
+       in case gmdMd of
+            R.GameMulti -> continue nextG
+            R.GameSolo p -> liftIO (R.handelIAPlay p nextG) >>= continue
     R.Home mode ->
       case mode of
         R.GameSolo _ -> continue $ R.SoloSelectPlayer R.PlayerWhite
@@ -66,20 +63,3 @@ handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) =
     _ -> continue $ R.Home (R.GameSolo R.PlayerWhite)
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
-
--- UTIL
-handelGameSoloPlay :: R.Player -> R.AppState -> IO R.AppState
-handelGameSoloPlay p s = do
-  start <- getCPUTime
-  let mCoord = R.solver (R.goGrid s) (R.playerTurn s)
-  end <- getCPUTime
-  let diff = fromIntegral (end - start) / (10 ^ 9)
-  let withDiff = s {R.lastIATimeForPlay = diff, R.cursorSuggestion = Nothing}
-  let nGS =
-        case mCoord of
-          Nothing -> withDiff
-          Just cod ->
-            case R.posePiece cod (R.playerTurn withDiff) (R.goGrid withDiff) of
-              Nothing -> withDiff
-              Just newGrd -> withDiff {R.goGrid = newGrd, R.playerTurn = R.nextPlayer (R.playerTurn withDiff)}
-  return nGS

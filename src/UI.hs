@@ -57,20 +57,17 @@ drawGame R.GameState { R.goGrid = grd
     -- BOARD
     wGoBoard :: Widget Name
     wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]
-    boarderY = ["   "] ++ map padIntStr [0 .. 18] ++ [" "]
-    padIntStr :: Int -> String
-    padIntStr = printf " %.2d"
-    cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ padIntStr y]
+    boarderY = ["   "] ++ map (printf " %.2d") [0 .. 18 :: Int] ++ [" "]
+    cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ printf " %.2d" y]
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
       if crv
         then if cx == x && cy == y
-               then let valideGrd = R.validePlay grd
-                     in if not (valideGrd !! cy !! cx)
-                          then withAttr cursorBadAttr cw
-                          else case R.playerToPiece plTurn of
-                                 R.PieceWhite -> withAttr pieceWhiteAttr cw
-                                 R.PieceBlack -> withAttr pieceBlackAttr cw
+               then if not (R.valideCoord (cx, cy) grd)
+                      then withAttr cursorBadAttr cw
+                      else case R.playerToPiece plTurn of
+                             R.PieceWhite -> withAttr pieceWhiteAttr cw
+                             R.PieceBlack -> withAttr pieceBlackAttr cw
                else case sugCrd of
                       Just (csx, csy) ->
                         if csx == x && csy == y
