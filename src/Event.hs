@@ -12,6 +12,7 @@ import qualified Reducer as R
 data CustomEvent =
   Tick
 
+-- END GAME ?
 handleEvent :: R.AppState -> BrickEvent Name CustomEvent -> EventM Name (Next R.AppState)
 handleEvent g (AppEvent Tick) =
   continue $
@@ -66,6 +67,7 @@ handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) =
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
 
+-- UTIL
 handelGameSoloPlay :: R.Player -> R.AppState -> IO R.AppState
 handelGameSoloPlay p s = do
   start <- getCPUTime
