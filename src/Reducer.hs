@@ -27,6 +27,7 @@ data Cell
   = PieceBlack
   | PieceWhite
   | EmptyCell
+  deriving (Eq)
 
 data Player
   = PlayerWhite
@@ -95,7 +96,7 @@ handelPlayCoord cr s =
     _ -> s
 
 posePiece :: Coord -> Player -> [[Cell]] -> [[Cell]]
-posePiece (cx, cy) p grd = imap upRow grd
+posePiece (cx, cy) p = imap upRow
   where
     upRow :: Int -> [Cell] -> [Cell]
     upRow y = imap (upCell y)
@@ -105,7 +106,27 @@ posePiece (cx, cy) p grd = imap upRow grd
         else c
 
 checkCaptur :: Coord -> AppState -> AppState -- TODO
-checkCaptur cr s = s
+checkCaptur cr s =
+  let toSup = filter (checkPoss (goGrid s)) $ map (genPosCheck cr (playerTurn s)) toCheck
+      nbCap = length toSup * 3
+      newGrd = foldr supElGrd (goGrid s) toSup
+   in s
+  where
+    toCheck = [(0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (-1, 1)]
+    genPosCheck (cx, cy) p (dx, dy) =
+      [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
+    checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
+    checkPos grd (x, y, p) = x >= 0 && x < 19 && y >= 0 && y < 19 && grd !! y !! x == playerToPiece p
+    supElGrd poss grd =
+      let (fx, fy, _) = poss !! 0
+          (sx, sy, _) = poss !! 1
+       in [ [ if (x == fx && y == fy) || (x == sx && y == sy)
+            then EmptyCell
+            else grd !! y !! x
+          | x <- [0 .. hGoGrid - 1]
+          ]
+          | y <- [0 .. hGoGrid - 1]
+          ]
 
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
@@ -137,7 +158,7 @@ nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
 valideCoords :: [[Cell]] -> [[Bool]] -- TODO
-valideCoords grd = map (map (\x -> True)) grd
+valideCoords = map (map (const True))
 
 valideCoord :: Coord -> [[Cell]] -> Bool
 valideCoord (cx, cy) grd = valideCoords grd !! cy !! cx
