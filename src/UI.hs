@@ -47,11 +47,14 @@ drawGame R.GameState { R.goGrid = grd
                      , R.lastIATimeForPlay = lstTimCmp
                      , R.cursorSuggestion = sugCrd
                      } = hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
+    -- CMD
   where
     wCmd :: Widget Name
     wCmd = str "Cmd"
+    -- INFO
     wInfo :: Widget Name
     wInfo = vBox [str "info", str "time of last computation:", str $ printf "%f ms" lstTimCmp]
+    -- BOARD
     wGoBoard :: Widget Name
     wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]
     boarderY = ["   "] ++ map padIntStr [0 .. 18] ++ [" "]

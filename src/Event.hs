@@ -56,6 +56,9 @@ handleEvent g (VtyEvent (V.EvKey (V.KChar 's') [])) =
   case g of
     R.GameState {} -> liftIO (R.suggestionPlay g) >>= continue
     _ -> continue g
-handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt g
+handleEvent g (VtyEvent (V.EvKey (V.KChar 'q') [])) =
+  case g of
+    R.Home _ -> halt g
+    _ -> continue $ R.Home (R.GameSolo R.PlayerWhite)
 handleEvent g (VtyEvent (V.EvKey V.KEsc [])) = halt g
 handleEvent g _ = continue g
