@@ -46,6 +46,7 @@ drawGame R.GameState { R.goGrid = grd
                      , R.playerTurn = plTurn
                      , R.lastIATimeForPlay = lstTimCmp
                      , R.cursorSuggestion = sugCrd
+                     , R.end = end
                      } = hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
     -- CMD
   where
@@ -53,7 +54,20 @@ drawGame R.GameState { R.goGrid = grd
     wCmd = str "Cmd"
     -- INFO
     wInfo :: Widget Name
-    wInfo = vBox [str "info", str "time of last computation:", str $ printf "%f ms" lstTimCmp]
+    wInfo = vBox ([str "time of last computation:", str $ printf "%f ms" lstTimCmp] ++ endMsg)
+    endMsg =
+      case end of
+        Nothing ->
+          case plTurn of
+            R.PlayerBlack -> [str "Player Turn: Black"]
+            R.PlayerWhite -> [str "Player Turn: White"]
+        Just mPl ->
+          case mPl of
+            Nothing -> [str "match null"]
+            Just plWin ->
+              case plWin of
+                R.PlayerWhite -> [str "Player White Win !"]
+                R.PlayerBlack -> [str "Player Black Win !"]
     -- BOARD
     wGoBoard :: Widget Name
     wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]

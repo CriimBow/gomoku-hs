@@ -14,6 +14,7 @@ data AppState
               , cursorSuggestion :: Maybe Coord -- suggestion IA
               , cursor :: Coord -- user cursor for play
               , cursorVisible :: Bool -- cursor visibility alternator
+              , end :: Maybe (Maybe Player) -- Maybe contain player win or Nothing if match null
                }
   | Home GameMode
   | SoloSelectPlayer Player
@@ -61,6 +62,7 @@ initGameState mode =
     , cursorSuggestion = Nothing
     , cursor = (9, 9)
     , cursorVisible = True
+    , end = Nothing
     }
 
 -- UPDATE STATE
@@ -78,18 +80,24 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
-handelPlayCoord :: Coord -> Player -> AppState -> AppState
-handelPlayCoord (cx, cy) p s = s {goGrid = imap upRow (goGrid s)}
+handelPlayCoord :: Coord -> AppState -> AppState
+handelPlayCoord (cx, cy) s =
+  case end s of
+    Nothing ->
+      if valideCoord (cx, cy) (goGrid s)
+        then s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+        else s
+    _ -> s
   where
     upRow :: Int -> [Cell] -> [Cell]
     upRow y = imap (upCell y)
     upCell y x c =
       if cx == x && cy == y
-        then playerToPiece p
+        then playerToPiece (playerTurn s)
         else c
 
-handelIAPlay :: Player -> AppState -> IO AppState
-handelIAPlay p s = do
+handelIAPlay :: AppState -> IO AppState
+handelIAPlay s = do
   start <- getCPUTime
   let mCoord = solver (goGrid s) (playerTurn s)
   end <- getCPUTime
@@ -97,7 +105,7 @@ handelIAPlay p s = do
   let withDiff = s {lastIATimeForPlay = diff}
   case mCoord of
     Nothing -> return withDiff
-    Just crd -> return (handelPlayCoord crd p withDiff)
+    Just crd -> return (handelPlayCoord crd withDiff)
 
 suggestionPlay :: AppState -> IO AppState
 suggestionPlay s = do
