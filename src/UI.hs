@@ -47,6 +47,8 @@ drawGame R.GameState { R.goGrid = grd
                      , R.lastIATimeForPlay = lstTimCmp
                      , R.cursorSuggestion = sugCrd
                      , R.end = end
+                     , R.nbPieceCapPBlack = nPCB
+                     , R.nbPieceCapPWhite = nPCW
                      } = hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
     -- CMD
   where
@@ -54,7 +56,10 @@ drawGame R.GameState { R.goGrid = grd
     wCmd = str "Cmd"
     -- INFO
     wInfo :: Widget Name
-    wInfo = vBox ([str "time of last computation:", str $ printf "%f ms" lstTimCmp] ++ endMsg)
+    wInfo =
+      vBox
+        ([padAll 1 $ vBox [str $ printf "nb Piece Cap Black: %d" nPCB, str $ printf "nb Piece Cap White: %d" nPCW]] ++
+         [padAll 1 $ vBox endMsg] ++ [padAll 1 $ vBox [str "time of last computation:", str $ printf "%f ms" lstTimCmp]])
     endMsg =
       case end of
         Nothing ->
