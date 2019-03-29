@@ -85,7 +85,7 @@ handelPlayCoord (cx, cy) s =
   case end s of
     Nothing ->
       if valideCoord (cx, cy) (goGrid s)
-        then s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+        then checkEnd $ s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
         else s
     _ -> s
   where
@@ -131,6 +131,9 @@ valideCoords grd = map (map (\x -> True)) grd
 valideCoord :: Coord -> [[Cell]] -> Bool
 valideCoord (cx, cy) grd = valideCoords grd !! cy !! cx
 
+checkEnd :: AppState -> AppState -- TODO
+checkEnd s = s
+
 -- SOLVER
-solver :: [[Cell]] -> Player -> Maybe Coord
-solver grd p = Just (0, 0) -- TODO
+solver :: [[Cell]] -> Player -> Maybe Coord -- TODO
+solver grd p = Just (0, 0)
