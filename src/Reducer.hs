@@ -15,6 +15,8 @@ data AppState
               , cursor :: Coord -- user cursor for play
               , cursorVisible :: Bool -- cursor visibility alternator
               , end :: Maybe (Maybe Player) -- Maybe contain player win or Nothing if match null
+              , nbPieceCapPWhite :: Int -- nombre de piece capture by player white
+              , nbPieceCapPBlack :: Int -- nombre de piece capture by player black
                }
   | Home GameMode
   | SoloSelectPlayer Player
@@ -63,6 +65,8 @@ initGameState mode =
     , cursor = (9, 9)
     , cursorVisible = True
     , end = Nothing
+    , nbPieceCapPBlack = 0
+    , nbPieceCapPWhite = 0
     }
 
 -- UPDATE STATE
@@ -81,14 +85,19 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
 handelPlayCoord :: Coord -> AppState -> AppState
-handelPlayCoord (cx, cy) s =
+handelPlayCoord cr s =
   case end s of
     Nothing ->
-      if valideCoord (cx, cy) (goGrid s)
-        then checkEnd $ s {goGrid = imap upRow (goGrid s), playerTurn = nextPlayer (playerTurn s)}
+      if valideCoord cr (goGrid s)
+        then let nwS = checkEnd $ posePiece cr s
+              in nwS {playerTurn = nextPlayer (playerTurn s)}
         else s
     _ -> s
+
+posePiece :: Coord -> AppState -> AppState
+posePiece (cx, cy) s = s {goGrid = todoGrid}
   where
+    todoGrid = imap upRow (goGrid s) -- Del piece
     upRow :: Int -> [Cell] -> [Cell]
     upRow y = imap (upCell y)
     upCell y x c =
