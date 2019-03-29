@@ -105,22 +105,29 @@ posePiece (cx, cy) p = imap upRow
         then playerToPiece p
         else c
 
-checkCaptur :: Coord -> AppState -> AppState -- TODO
+checkCaptur :: Coord -> AppState -> AppState
 checkCaptur cr s =
-  let toSup = filter (checkPoss (goGrid s)) $ map (genPosCheck cr (playerTurn s)) toCheck
+  let toSup = checkCapturToSup (playerTurn s) cr (goGrid s)
       nbCap = length toSup * 3
-      newGrd = foldr supElGrd (goGrid s) toSup
-   in case (playerTurn s) of
-        PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = (nbPieceCapPBlack s) + nbCap}
-        PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = (nbPieceCapPWhite s) + nbCap}
+      newGrd = supPosGrid (goGrid s) toSup
+   in case playerTurn s of
+        PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = nbPieceCapPBlack s + nbCap}
+        PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
+
+checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
+checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) toCheck
   where
     toCheck = [(0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (1, -1)]
     genPosCheck (cx, cy) p (dx, dy) =
       [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
     checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
     checkPos grd (x, y, p) = x >= 0 && x < 19 && y >= 0 && y < 19 && grd !! y !! x == playerToPiece p
+
+supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
+supPosGrid grd toSup = foldr supElGrd grd toSup
+  where
     supElGrd poss grd =
-      let (fx, fy, _) = poss !! 0
+      let (fx, fy, _) = head poss
           (sx, sy, _) = poss !! 1
        in [ [ if (x == fx && y == fy) || (x == sx && y == sy)
             then EmptyCell
