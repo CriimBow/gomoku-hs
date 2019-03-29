@@ -62,14 +62,14 @@ drawGame R.GameState { R.goGrid = grd
     drawCell y x cell =
       if crv
         then if cx == x && cy == y
-               then case (cell, plTurn) of
-                      (R.EmptyCell, R.PlayerBlack) -> pieceToWiget R.PieceBlack
-                      (R.EmptyCell, R.PlayerWhite) -> pieceToWiget R.PieceWhite
-                      _ -> withAttr cursorBadAttr $ str "(#)" -- "() "
+               then let valideGrd = R.validePlay grd
+                     in if not (valideGrd !! cy !! cx)
+                          then withAttr cursorBadAttr cw
+                          else pieceToWiget $ R.playerToPiece plTurn
                else case sugCrd of
                       Just (csx, csy) ->
                         if csx == x && csy == y
-                          then withAttr suggestionAttr $ str "(#)" -- "() "
+                          then withAttr suggestionAttr cw
                           else pieceToWiget cell
                       Nothing -> pieceToWiget cell
         else pieceToWiget cell
@@ -79,7 +79,7 @@ drawGame R.GameState { R.goGrid = grd
         R.PieceBlack -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "
         R.EmptyCell -> withAttr emptyAttr cw
     cw :: Widget Name
-    cw = str "   "
+    cw = str "(#)" -- "() "
 
 drawHome :: R.GameMode -> Widget Name
 drawHome mode = hBox wg

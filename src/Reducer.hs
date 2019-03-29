@@ -64,24 +64,18 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
 
-playerPlay :: AppState -> AppState
-playerPlay s =
-  let GameState {cursor = (cx, cy), goGrid = grd} = s
-      cellCr = grd !! cy !! cx
-   in case cellCr of
-        EmptyCell ->
-          s
-            { goGrid = imap (upRow (cx, cy)) (goGrid s)
-            , playerTurn = nextPlayer (playerTurn s)
-            , cursorSuggestion = Nothing
-            }
-        _ -> s
+posePiece :: Coord -> Player -> [[Cell]] -> Maybe [[Cell]] -- TODO del piece ...
+posePiece (cx, cy) p grd =
+  let valideGrd = validePlay grd
+   in if not (valideGrd !! cy !! cx)
+        then Nothing
+        else Just $ imap upRow grd
   where
-    upRow :: (Int, Int) -> Int -> [Cell] -> [Cell]
-    upRow cr y = imap (upCell cr y)
-    upCell (cx, cy) y x c =
+    upRow :: Int -> [Cell] -> [Cell]
+    upRow y = imap (upCell y)
+    upCell y x c =
       if cx == x && cy == y
-        then playerToPiece $ playerTurn s
+        then playerToPiece p
         else c
 
 suggestionPlay :: AppState -> IO AppState
@@ -101,6 +95,9 @@ playerToPiece PlayerBlack = PieceBlack
 nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
+
+validePlay :: [[Cell]] -> [[Bool]] -- TODO
+validePlay grd = map (map (\x -> True)) grd
 
 -- SOLVER
 solver :: [[Cell]] -> Player -> Coord

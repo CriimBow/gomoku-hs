@@ -42,7 +42,11 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   continue $
   case g of
-    R.GameState {} -> R.playerPlay g
+    R.GameState {} ->
+      let newGrd = R.posePiece (R.cursor g) (R.playerTurn g) (R.goGrid g)
+       in case newGrd of
+            Nothing -> g
+            Just grd -> g {R.goGrid = grd, R.playerTurn = R.nextPlayer (R.playerTurn g), R.cursorSuggestion = Nothing}
     R.Home mode ->
       case mode of
         R.GameSolo _ -> R.SoloSelectPlayer R.PlayerWhite
