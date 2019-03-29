@@ -110,9 +110,11 @@ checkCaptur cr s =
   let toSup = filter (checkPoss (goGrid s)) $ map (genPosCheck cr (playerTurn s)) toCheck
       nbCap = length toSup * 3
       newGrd = foldr supElGrd (goGrid s) toSup
-   in s
+   in case (playerTurn s) of
+        PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = (nbPieceCapPBlack s) + nbCap}
+        PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = (nbPieceCapPWhite s) + nbCap}
   where
-    toCheck = [(0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (-1, 1)]
+    toCheck = [(0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (1, -1)]
     genPosCheck (cx, cy) p (dx, dy) =
       [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
     checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
