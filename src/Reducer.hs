@@ -170,12 +170,14 @@ valideCoords :: [[Cell]] -> [[Bool]] -- TODO
 valideCoords = map (map (== EmptyCell))
 
 valideCoord :: Coord -> [[Cell]] -> Bool
-valideCoord (cx, cy) grd = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && valideCoords grd !! cy !! cx
+valideCoord (cx, cy) grd = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd !! cy !! cx
 
 checkEnd :: AppState -> AppState -- TODO
 checkEnd s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
+  | False = s -- TODO alignement
+  | otherwise = s
   | otherwise = s
 
 -- SOLVER
