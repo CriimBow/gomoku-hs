@@ -2,7 +2,7 @@ module Reducer where
 
 import Constant (allDir, hGoGrid)
 import Control.Lens.Combinators (imap)
-import Data.Maybe (isNothing)
+import Data.Maybe (isJust, isNothing)
 import System.CPUTime
 import System.Random (Random(..), newStdGen)
 
@@ -90,7 +90,7 @@ handelPlayCoord :: Coord -> AppState -> AppState
 handelPlayCoord cr s =
   case end s of
     Nothing ->
-      if valideCoord cr (goGrid s)
+      if valideCoord (goGrid s) (playerTurn s) cr
         then let nwS = checkEnd cr $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
               in nwS {playerTurn = nextPlayer (playerTurn s)}
         else s
@@ -150,7 +150,7 @@ handelIAPlay s = do
 
 suggestionPlay :: AppState -> IO AppState
 suggestionPlay s =
-  if not $ isNothing $ end s
+  if isJust (end s)
     then return s
     else do
       let GameState {goGrid = grd, playerTurn = plTrn} = s
@@ -169,18 +169,23 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-valideCoords :: [[Cell]] -> [[Bool]] -- TODO
-valideCoords = map (map (== EmptyCell))
+valideCoords :: [[Cell]] -> Player -> [[Bool]] -- TODO
+valideCoords grd p =
+  let emptyCells = map (map (== EmptyCell)) grd
+   in [[emptyCells !! y !! x && checkDoubleThree grd p (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+  where
+    checkDoubleThree grd p (cx, cy) = True
 
-valideCoord :: Coord -> [[Cell]] -> Bool
-valideCoord (cx, cy) grd = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd !! cy !! cx
+valideCoord :: [[Cell]] -> Player -> Coord -> Bool
+valideCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd p !! cy !! cx
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
   | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
-  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ valideCoords $ goGrid s) = s {end = Just Nothing}
+  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ valideCoords (goGrid s) (playerTurn s)) =
+    s {end = Just Nothing}
   | otherwise = s
   where
     checkAlign5 (cx, cy) grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
