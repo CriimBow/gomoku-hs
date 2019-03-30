@@ -121,10 +121,10 @@ checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) toCh
     genPosCheck (cx, cy) p (dx, dy) =
       [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
     checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
-    checkPos grd (x, y, p) = x >= 0 && x < 19 && y >= 0 && y < 19 && grd !! y !! x == playerToPiece p
+    checkPos grd (x, y, p) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
 
 supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
-supPosGrid grd toSup = foldr supElGrd grd toSup
+supPosGrid = foldr supElGrd
   where
     supElGrd poss grd =
       let (fx, fy, _) = head poss
@@ -167,10 +167,10 @@ nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
 valideCoords :: [[Cell]] -> [[Bool]] -- TODO
-valideCoords = map (map (const True))
+valideCoords = map (map (== EmptyCell))
 
 valideCoord :: Coord -> [[Cell]] -> Bool
-valideCoord (cx, cy) grd = valideCoords grd !! cy !! cx
+valideCoord (cx, cy) grd = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && valideCoords grd !! cy !! cx
 
 checkEnd :: AppState -> AppState -- TODO
 checkEnd s
