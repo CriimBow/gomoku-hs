@@ -181,14 +181,15 @@ valideCoords grd p =
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
-    genPosCheck :: Player -> Coord -> Coord -> [[(Int, Int, Cell)]]
-    genPosCheck p (cx, cy) (dx, dy) = map (map (\(k, c) -> (cx + dx * k, cy + dy * k, c))) (maskCoef $ playerToPiece p)
-    checkAllPos :: [[Cell]] -> [[(Int, Int, Cell)]] -> Bool
+    genPosCheck :: Player -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
+    genPosCheck p (cx, cy) (dx, dy) =
+      map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) (maskCoef $ playerToPiece p)
+    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grd lpos =
       let tmp = filter (checkLPos grd) lpos
        in 1 >= length tmp
-    checkLPos :: [[Cell]] -> [(Int, Int, Cell)] -> Bool
-    checkLPos grd lp = length lp == length (filter (checkPos grd) lp)
+    checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
+    checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
     checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
 
