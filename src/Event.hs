@@ -12,7 +12,6 @@ import qualified Reducer as R
 data CustomEvent =
   Tick
 
--- END GAME ?
 handleEvent :: R.AppState -> BrickEvent Name CustomEvent -> EventM Name (Next R.AppState)
 handleEvent g (AppEvent Tick) =
   continue $

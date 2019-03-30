@@ -153,9 +153,8 @@ suggestionPlay s =
   if isJust (end s)
     then return s
     else do
-      let GameState {goGrid = grd, playerTurn = plTrn} = s
       start <- getCPUTime
-      let coord = solver grd plTrn
+      let coord = solver (goGrid s) (playerTurn s)
       end <- getCPUTime
       let diff = fromIntegral (end - start) / (10 ^ 9)
       return s {lastIATimeForPlay = diff, cursorSuggestion = coord}
@@ -174,7 +173,20 @@ valideCoords grd p =
   let emptyCells = map (map (== EmptyCell)) grd
    in [[emptyCells !! y !! x && checkDoubleThree grd p (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
   where
-    checkDoubleThree grd p (cx, cy) = True
+    checkDoubleThree grd p (cx, cy) = checkAllPos grd $ allDir >>= genPosCheck (cx, cy)
+    pc = playerToPiece p
+    maskCoef =
+      [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
+      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
+      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (-1, EmptyCell)]
+      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
+      , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
+      ]
+    genPosCheck :: Coord -> Coord -> [[(Int, Int, Cell)]]
+    genPosCheck (cx, cy) (dx, dy) = map (map (\(k, c) -> (cx + dx * k, cy + dy * k, c))) maskCoef
+    checkAllPos :: [[Cell]] -> [[(Int, Int, Cell)]] -> Bool
+    checkAllPos grd lpos = True
+    checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
 
 valideCoord :: [[Cell]] -> Player -> Coord -> Bool
 valideCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd p !! cy !! cx
