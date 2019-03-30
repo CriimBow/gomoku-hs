@@ -186,12 +186,14 @@ valideCoords grd p =
       map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) (maskCoef $ playerToPiece p)
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grd lpos =
-      let tmp = filter (checkLPos grd) lpos
-       in 1 >= length tmp
+      let tmp = map snd $ filter (checkLPos grd) lpos
+       in 1 >= length (foldr delDir tmp tmp)
     checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
     checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
     checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
+    delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+    delDir (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy))
 
 valideCoord :: [[Cell]] -> Player -> Coord -> Bool
 valideCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd p !! cy !! cx
