@@ -173,19 +173,23 @@ valideCoords grd p =
   let emptyCells = map (map (== EmptyCell)) grd
    in [[emptyCells !! y !! x && checkDoubleThree grd p (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
   where
-    checkDoubleThree grd p (cx, cy) = checkAllPos grd $ allDir >>= genPosCheck (cx, cy)
-    pc = playerToPiece p
-    maskCoef =
+    checkDoubleThree grd p cr = checkAllPos grd $ allDir >>= genPosCheck p cr
+    maskCoef pc =
       [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
       , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (-1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
-    genPosCheck :: Coord -> Coord -> [[(Int, Int, Cell)]]
-    genPosCheck (cx, cy) (dx, dy) = map (map (\(k, c) -> (cx + dx * k, cy + dy * k, c))) maskCoef
+    genPosCheck :: Player -> Coord -> Coord -> [[(Int, Int, Cell)]]
+    genPosCheck p (cx, cy) (dx, dy) = map (map (\(k, c) -> (cx + dx * k, cy + dy * k, c))) (maskCoef $ playerToPiece p)
     checkAllPos :: [[Cell]] -> [[(Int, Int, Cell)]] -> Bool
-    checkAllPos grd lpos = True
+    checkAllPos grd lpos =
+      let tmp = filter (checkLPos grd) lpos
+       in 1 >= length tmp
+    checkLPos :: [[Cell]] -> [(Int, Int, Cell)] -> Bool
+    checkLPos grd lp = length lp == length (filter (checkPos grd) lp)
+    checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
     checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
 
 valideCoord :: [[Cell]] -> Player -> Coord -> Bool
