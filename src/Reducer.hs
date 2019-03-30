@@ -1,6 +1,6 @@
 module Reducer where
 
-import Constant (hGoGrid)
+import Constant (allDir, hGoGrid)
 import Control.Lens.Combinators (imap)
 import System.CPUTime
 import System.Random (Random(..), newStdGen)
@@ -90,7 +90,7 @@ handelPlayCoord cr s =
   case end s of
     Nothing ->
       if valideCoord cr (goGrid s)
-        then let nwS = checkEnd $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
+        then let nwS = checkEnd cr $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
               in nwS {playerTurn = nextPlayer (playerTurn s)}
         else s
     _ -> s
@@ -108,16 +108,15 @@ posePiece (cx, cy) p = imap upRow
 checkCaptur :: Coord -> AppState -> AppState
 checkCaptur cr s =
   let toSup = checkCapturToSup (playerTurn s) cr (goGrid s)
-      nbCap = length toSup * 3
+      nbCap = length toSup * 2
       newGrd = supPosGrid (goGrid s) toSup
    in case playerTurn s of
         PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = nbPieceCapPBlack s + nbCap}
         PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
 
 checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
-checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) toCheck
+checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) allDir
   where
-    toCheck = [(0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (1, -1)]
     genPosCheck (cx, cy) p (dx, dy) =
       [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
     checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
@@ -172,14 +171,25 @@ valideCoords = map (map (== EmptyCell))
 valideCoord :: Coord -> [[Cell]] -> Bool
 valideCoord (cx, cy) grd = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd !! cy !! cx
 
-checkEnd :: AppState -> AppState -- TODO
-checkEnd s
+checkEnd :: Coord -> AppState -> AppState
+checkEnd cr s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
-  | False = s -- TODO alignement
+  | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
   | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ valideCoords $ goGrid s) = s {end = Just Nothing}
   | otherwise = s
+  where
+    checkAlign5 (cx, cy) grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
+    maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
+    genPosCheck :: Coord -> Coord -> [[Coord]]
+    genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
+    checkAllPos grd p lpos =
+      let tmp = map (length . filter (checkPos grd p)) lpos
+       in (0 /= length (filter (== 5) tmp))
+    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
 
--- SOLVER
+------------
+-- SOLVER --
+------------
 solver :: [[Cell]] -> Player -> Maybe Coord -- TODO
 solver grd p = Just (0, 0)
