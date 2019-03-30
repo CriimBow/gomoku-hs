@@ -2,6 +2,7 @@ module Reducer where
 
 import Constant (allDir, hGoGrid)
 import Control.Lens.Combinators (imap)
+import Data.Maybe (isNothing)
 import System.CPUTime
 import System.Random (Random(..), newStdGen)
 
@@ -148,13 +149,16 @@ handelIAPlay s = do
     Just crd -> return (handelPlayCoord crd withDiff)
 
 suggestionPlay :: AppState -> IO AppState
-suggestionPlay s = do
-  let GameState {goGrid = grd, playerTurn = plTrn} = s
-  start <- getCPUTime
-  let coord = solver grd plTrn
-  end <- getCPUTime
-  let diff = fromIntegral (end - start) / (10 ^ 9)
-  return s {lastIATimeForPlay = diff, cursorSuggestion = coord}
+suggestionPlay s =
+  if not $ isNothing $ end s
+    then return s
+    else do
+      let GameState {goGrid = grd, playerTurn = plTrn} = s
+      start <- getCPUTime
+      let coord = solver grd plTrn
+      end <- getCPUTime
+      let diff = fromIntegral (end - start) / (10 ^ 9)
+      return s {lastIATimeForPlay = diff, cursorSuggestion = coord}
 
 -- UTIL
 playerToPiece :: Player -> Cell

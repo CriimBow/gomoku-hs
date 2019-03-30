@@ -28,6 +28,7 @@ import qualified Brick.Widgets.Center as C
 import qualified Graphics.Vty as V
 import qualified Reducer as R
 import Text.Printf (printf)
+import Data.Maybe (isNothing)
 
 -- DRAWING
 drawUI :: R.AppState -> [Widget Name]
@@ -80,7 +81,7 @@ drawGame R.GameState { R.goGrid = grd
     cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ printf " %.2d" y]
     drawCell :: Int -> Int -> R.Cell -> Widget Name
     drawCell y x cell =
-      if crv
+      if crv && isNothing end
         then if cx == x && cy == y
                then if not (R.valideCoord (cx, cy) grd)
                       then withAttr cursorBadAttr cw
