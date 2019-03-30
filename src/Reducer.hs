@@ -177,7 +177,7 @@ checkEnd s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
   | False = s -- TODO alignement
-  | otherwise = s
+  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ valideCoords $ goGrid s) = s {end = Just Nothing}
   | otherwise = s
 
 -- SOLVER
