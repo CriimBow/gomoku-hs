@@ -3,6 +3,7 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.Lens.Combinators (imap)
 import Data.Maybe (isJust, isNothing)
+import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
 import System.Random (Random(..), newStdGen)
 
@@ -21,23 +22,25 @@ data AppState
                }
   | Home GameMode
   | SoloSelectPlayer Player
-
-type Coord = (Int, Int)
+  deriving (Eq, Show)
 
 data Cell
   = PieceBlack
   | PieceWhite
   | EmptyCell
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Player
   = PlayerWhite
   | PlayerBlack
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data GameMode
   = GameSolo Player
   | GameMulti
+  deriving (Eq, Show)
+
+type Coord = (Int, Int)
 
 -- INIT STATE
 initState :: AppState
@@ -168,12 +171,12 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-valideCoords :: [[Cell]] -> Player -> [[Bool]] -- TODO
+valideCoords :: [[Cell]] -> Player -> [[Bool]]
 valideCoords grd p =
   let emptyCells = map (map (== EmptyCell)) grd
-   in [[emptyCells !! y !! x && checkDoubleThree grd p (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      msk = (maskCoef $ playerToPiece p)
+   in [[emptyCells !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
   where
-    checkDoubleThree grd p cr = checkAllPos grd $ allDir >>= genPosCheck p cr
     maskCoef pc =
       [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
@@ -181,19 +184,20 @@ valideCoords grd p =
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
-    genPosCheck :: Player -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
-    genPosCheck p (cx, cy) (dx, dy) =
-      map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) (maskCoef $ playerToPiece p)
+    checkDoubleThree grd msk cr = checkAllPos grd $ allDir >>= genPosCheck msk cr
+    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
+    genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grd lpos =
       let tmp = map snd $ filter (checkLPos grd) lpos
-       in 1 >= length  (foldr delDir tmp tmp)
+          dDir = foldr delDir [] tmp
+       in 1 >= length dDir
     checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
     checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
     checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
     delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
-    delDir (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy))
+    delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
 valideCoord :: [[Cell]] -> Player -> Coord -> Bool
 valideCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd p !! cy !! cx
