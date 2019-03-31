@@ -177,7 +177,7 @@ valideCoords grd p =
     maskCoef pc =
       [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
-      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (-1, EmptyCell)]
+      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
@@ -187,7 +187,7 @@ valideCoords grd p =
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grd lpos =
       let tmp = map snd $ filter (checkLPos grd) lpos
-       in 1 >= length (foldr delDir tmp tmp)
+       in 1 >= length  (foldr delDir tmp tmp)
     checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
     checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
