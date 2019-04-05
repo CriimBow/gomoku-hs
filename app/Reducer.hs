@@ -210,12 +210,19 @@ distEmptyCellMap grd maxDist =
    in foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
-    addDist1 grd = [[grd !! y !! x && not (checkVoisin grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-    checkVoisin :: [[Bool]] -> Int -> Int -> Bool
-    checkVoisin grd x y =
+    addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
+    checkNeighbour grd x y =
       checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
     checkPos :: [[Bool]] -> Int -> Int -> Bool
     checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
+
+-- /!\ no valide play if the map is Empty!
+validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
+validIACoords grd p d =
+  let v = validCoords grd p
+      gd = distEmptyCellMap grd d
+   in [[v !! y !! x && not (gd !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
