@@ -33,6 +33,9 @@ executables:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
+      - -O2
+      - -funfolding-use-threshold=16
+      - -optc-O3
     dependencies:
       - gomoku
       - brick
