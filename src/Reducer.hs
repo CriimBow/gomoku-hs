@@ -206,11 +206,11 @@ distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
 distEmptyCellMap grd maxDist =
   let initMap = map (map (== EmptyCell)) grd
       iterator = [1 .. maxDist]
-   in foldr (\a b -> (addDist1 b)) initMap iterator
+   in foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 map = [[checkVoisin grd x y | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
     checkVoisin grd x y =
-      checkPos grd (x - 1) y || checkPos grd x (y - 1) || checkPos grd x (y + 1) || checkPos grd (x + 1) y
+      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
     checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x /= EmptyCell
 
 checkEnd :: Coord -> AppState -> AppState
