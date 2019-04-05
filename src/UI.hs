@@ -60,7 +60,7 @@ drawGame R.GameState { R.goGrid = grd
     wCmd =
       padAll 1 $
       vBox
-        [ padBottom (Pad 1) $ str "Cmd:"
+        [ padTop (Pad 5) $ padBottom (Pad 1) $ str "Commands:"
         , str "Key Right: Right"
         , str "Key Up: Up"
         , str "Key Down: Down"
@@ -70,9 +70,10 @@ drawGame R.GameState { R.goGrid = grd
     -- INFO
     wInfo :: Widget Name
     wInfo =
+      padTop (Pad 5) $
       vBox
-        ([padAll 1 $ vBox [str $ printf "nb Piece Cap Black: %d" nPCB, str $ printf "nb Piece Cap White: %d" nPCW]] ++
-         [padAll 1 $ vBox endMsg] ++ [padAll 1 $ vBox [str "time of last computation:", str $ printf "%f ms" lstTimCmp]])
+        ([padAll 1 $ vBox [str $ printf "Nb piece cap black: %d" nPCB, str $ printf "Nb piece cap white: %d" nPCW]] ++
+         [padAll 1 $ vBox endMsg] ++ [padAll 1 $ vBox [str "Time of last computation:", str $ printf "%f ms" lstTimCmp]])
     endMsg =
       case end of
         Nothing ->
@@ -81,7 +82,7 @@ drawGame R.GameState { R.goGrid = grd
             R.PlayerWhite -> [str "Player Turn: White"]
         Just mPl ->
           case mPl of
-            Nothing -> [str "match null"]
+            Nothing -> [str "Match null"]
             Just plWin ->
               case plWin of
                 R.PlayerWhite -> [str "Player White Win !"]
