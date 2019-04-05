@@ -202,16 +202,20 @@ validCoords grd p =
 validCoord :: [[Cell]] -> Player -> Coord -> Bool
 validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
 
+-- False if is dist <= maxDist
 distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
 distEmptyCellMap grd maxDist =
   let initMap = map (map (== EmptyCell)) grd
       iterator = [1 .. maxDist]
    in foldr (\_ b -> addDist1 b) initMap iterator
   where
-    addDist1 map = [[checkVoisin grd x y | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    addDist1 :: [[Bool]] -> [[Bool]]
+    addDist1 grd = [[grd !! y !! x && not (checkVoisin grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    checkVoisin :: [[Bool]] -> Int -> Int -> Bool
     checkVoisin grd x y =
       checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
-    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x /= EmptyCell
+    checkPos :: [[Bool]] -> Int -> Int -> Bool
+    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
