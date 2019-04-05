@@ -83,7 +83,7 @@ drawGame R.GameState { R.goGrid = grd
     drawCell y x cell =
       if crv && isNothing end
         then if cx == x && cy == y
-               then if not (R.valideCoord grd plTurn (cx, cy))
+               then if not (R.validCoord grd plTurn (cx, cy))
                       then withAttr cursorBadAttr cw
                       else case R.playerToPiece plTurn of
                              R.PieceWhite -> withAttr pieceWhiteAttr cw

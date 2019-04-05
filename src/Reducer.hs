@@ -93,7 +93,7 @@ handelPlayCoord :: Coord -> AppState -> AppState
 handelPlayCoord cr s =
   case end s of
     Nothing ->
-      if valideCoord (goGrid s) (playerTurn s) cr
+      if validCoord (goGrid s) (playerTurn s) cr
         then let nwS = checkEnd cr $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
               in nwS {playerTurn = nextPlayer (playerTurn s)}
         else s
@@ -171,8 +171,8 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-valideCoords :: [[Cell]] -> Player -> [[Bool]]
-valideCoords grd p =
+validCoords :: [[Cell]] -> Player -> [[Bool]]
+validCoords grd p =
   let emptyCells = map (map (== EmptyCell)) grd
       msk = (maskCoef $ playerToPiece p)
    in [[emptyCells !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
@@ -199,15 +199,26 @@ valideCoords grd p =
     delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
     delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
-valideCoord :: [[Cell]] -> Player -> Coord -> Bool
-valideCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && valideCoords grd p !! cy !! cx
+validCoord :: [[Cell]] -> Player -> Coord -> Bool
+validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
+
+distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
+distEmptyCellMap grd maxDist =
+  let initMap = map (map (== EmptyCell)) grd
+      iterator = [1 .. maxDist]
+   in foldr (\a b -> (addDist1 b)) initMap iterator
+  where
+    addDist1 map = [[checkVoisin grd x y | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    checkVoisin grd x y =
+      checkPos grd (x - 1) y || checkPos grd x (y - 1) || checkPos grd x (y + 1) || checkPos grd (x + 1) y
+    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x /= EmptyCell
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
   | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
-  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ valideCoords (goGrid s) (playerTurn s)) =
+  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ validCoords (goGrid s) (playerTurn s)) =
     s {end = Just Nothing}
   | otherwise = s
   where
