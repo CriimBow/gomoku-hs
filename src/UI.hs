@@ -11,9 +11,11 @@ import Brick
   , hBox
   , on
   , padAll
+  , padBottom
   , padLeft
   , padLeftRight
   , padRight
+  , padTop
   , str
   , vBox
   , withAttr
@@ -22,13 +24,14 @@ import Brick
 import Control.Lens.Combinators (imap)
 import Name (Name)
 
+import Brick.Types (Padding(..))
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
+import Data.Maybe (isNothing)
 import qualified Graphics.Vty as V
 import qualified Reducer as R
 import Text.Printf (printf)
-import Data.Maybe (isNothing)
 
 -- DRAWING
 drawUI :: R.AppState -> [Widget Name]
@@ -54,7 +57,16 @@ drawGame R.GameState { R.goGrid = grd
     -- CMD
   where
     wCmd :: Widget Name
-    wCmd = str "Cmd"
+    wCmd =
+      padAll 1 $
+      vBox
+        [ padBottom (Pad 1) $ str "Cmd:"
+        , str "Key Right: Right"
+        , str "Key Up: Up"
+        , str "Key Down: Down"
+        , str "Key Left: Left"
+        , padTop (Pad 1) $ str "ENTER: Pose a piece"
+        ]
     -- INFO
     wInfo :: Widget Name
     wInfo =
