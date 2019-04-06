@@ -2,6 +2,9 @@ module Solver where
 
 import Reducer
 import Constant (allDir, hGoGrid)
+import Data.List (elemIndex)
+import Debug.Trace (trace)
+import Data.Maybe (fromMaybe)
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
@@ -74,6 +77,8 @@ preScoring grid player move scoring =
 
     countSpace :: [[Cell]] -> [(Int, Int)] -> (Int,Int) -> Int -> Int
     countSpace grid allDir move idx
+        | (fst move + fst (allDir !! idx)) < 0 || (snd move + snd (allDir !! idx)) < 0 = 0
+        | (fst move + fst (allDir !! idx)) > (hGoGrid - 1) || (snd move + snd (allDir !! idx)) > (hGoGrid - 1) = 0
         | grid !! (snd move + snd (allDir !! idx)) !! (fst move + fst (allDir !! idx)) == EmptyCell = countDirection grid player (spacePos move (allDir !! idx)) 0 (allDir !! idx)
         | otherwise = 0
 
@@ -100,3 +105,41 @@ scoringCalc scoring =
     score3 = 1000
     score4 = 100000
     score5 = toInteger (maxBound :: Int)
+
+
+--- diffScore blanc - noir
+--- blanc => maximiser la différence => tendre vers +infini
+--- noir => minimiser la différence => tendre vers - infini
+
+miniMax :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> (Integer, Coord)
+miniMax grid player depth whiteSco blackSco move
+  | depth == 0 = (diffScore, move)
+  | player == PlayerWhite && (length nxtMoveWhite) == 0 = (diffScore, move)
+  | player == PlayerBlack && (length nxtMoveBlack) == 0 = (diffScore, move)
+  | player == PlayerWhite = outBlack !! blackIdx
+  | otherwise = outWhite !! whiteIdx
+  where
+    returnScores :: [(Integer, Coord)] -> [Integer]
+    returnScores out = [fst tuple | x <- [0 .. (length out - 1)], let tuple = out !! x]
+
+    newGrid = posePiece move player grid
+
+    newWhiteSco = if player == PlayerWhite
+                    then preScoring newGrid PlayerWhite move whiteSco
+                    else whiteSco
+    newBlackSco = if player == PlayerBlack
+                    then preScoring newGrid PlayerWhite move blackSco
+                    else blackSco
+
+    diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
+    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 2)
+    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 2)
+
+    outWhite = map (miniMax newGrid PlayerWhite (depth - 1) newWhiteSco newBlackSco) nxtMoveWhite
+    -- [(123456, (0,0)), (1236, (0,2)), (14236, (1,2))]
+    outBlack = map (miniMax newGrid PlayerBlack (depth - 1) newWhiteSco newBlackSco) nxtMoveBlack
+
+    whiteIdx = fromMaybe 0 (elemIndex (maximum (returnScores outWhite)) (returnScores outWhite))
+
+    blackIdx = fromMaybe 0 (elemIndex (minimum (returnScores outBlack)) (returnScores outBlack))
+
