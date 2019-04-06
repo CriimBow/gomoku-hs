@@ -88,3 +88,15 @@ preScoring grid player move scoring =
     scoringPos2 = preScoringOneDirection countedDir (dirCouples !! 1) (spaceCount !! 1) (spaceCount !! 4) scoringPos1
     scoringPos3 = preScoringOneDirection countedDir (dirCouples !! 2) (spaceCount !! 2) (spaceCount !! 3) scoringPos2
     scoringPos4 = preScoringOneDirection countedDir (dirCouples !! 3) (spaceCount !! 6) (spaceCount !! 7) scoringPos3
+    
+    
+scoringCalc :: ([Int], [Int]) -> Integer
+scoringCalc scoring =
+  a * score1 + b * score2 + c * score3 + d * score4 + e * score5 + g * (score2 - 1) + h * (score3 - 1) + i * (score4 - 1) + j * (score5 - 1)
+  where
+    ([a,b,c,d,e], [f,g,h,i,j]) = (map toInteger (fst scoring), map toInteger (snd scoring))
+    score1 = 1
+    score2 = 100
+    score3 = 1000
+    score4 = 100000
+    score5 = toInteger (maxBound :: Int)
