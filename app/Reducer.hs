@@ -224,6 +224,10 @@ validIACoords grd p d =
       gd = distEmptyCellMap grd d
    in [[v !! y !! x && not (gd !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
 
+validCoordToList :: [[Bool]] -> [(Int, Int)]
+validCoordToList grid =
+  [(x,y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
+
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
