@@ -1,12 +1,12 @@
 module Solver where
 
 import Reducer
-import Constant (allDir)
+import Constant (allDir, hGoGrid)
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
   | 0 > fst move || 0 > snd move = count
-  | 18 < fst move || 18 < snd move = count
+  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
   | playerPiece /= gridPiece = count
   | otherwise = countDirection grid player (sumTuples move direction) (count + 1) direction
   where
