@@ -219,7 +219,8 @@ distEmptyCellMap grd maxDist =
     addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
     checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
     checkNeighbour grd x y =
-      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
+      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y ||
+      checkPos grd (x + 1) (y + 1) || checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
     checkPos :: [[Bool]] -> Int -> Int -> Bool
     checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
 
@@ -256,9 +257,9 @@ checkEnd cr s
 ------------
 solver :: [[Cell]] -> Player -> Int -> Int -> Coord
 solver grd p nbCapBlack nbCapWihte =
-  let scoreBlack = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
-      scoreWhite = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
-   in miniWrapper grd p 3 scoreWhite scoreBlack
+  let scoreBlack = ([0, 0, 0, 0, 0], [(div nbCapBlack 2), 0, 0, 0, 0])
+      scoreWhite = ([0, 0, 0, 0, 0], [(div nbCapWihte 2), 0, 0, 0, 0])
+   in miniWrapper grd p 2 scoreWhite scoreBlack
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
@@ -354,9 +355,8 @@ preScoring grid player move scoring = scoring5
 
 scoringCalc :: ([Int], [Int]) -> Integer
 scoringCalc scoring =
-  a * score1 + b * score2 + c * score3 + d * score4 + e * score5 + g * (score2 - 1) + h * (score3 - 1) +
-  i * (score4 - 1) +
-  j * (score5' - 1)
+  a * score1 + b * score2 + c * score3 + d * score4 + e * score5 + g * (score2 - 1) +
+  h * (score3 - 1) + i * (score4 - 1) +  j * (score5' - 1) + scoreTaken
   where
     ([a, b, c, d, e], [f, g, h, i, j]) = (map toInteger (fst scoring), map toInteger (snd scoring))
     score1 = 1
@@ -365,7 +365,9 @@ scoringCalc scoring =
     score4 = 100000
     score5 = 10 * (toInteger (maxBound :: Int))
     score5' = (toInteger (maxBound :: Int)) - 1
-    scoreTaken = 10 * (toInteger (maxBound :: Int))
+    scoreTaken = if f == 5
+                  then 10 * (toInteger (maxBound :: Int)) + 1
+                  else 100000 * f
 
 --- diffScore blanc - noir
 --- blanc => maximiser la différence => tendre vers +infini
@@ -419,15 +421,15 @@ miniWrapper grid player depth whiteSco blackSco
   | player == PlayerBlack = nxtMoveWhite !! whiteRet
   | otherwise = nxtMoveBlack !! blackRet
   where
-    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
-    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
+    nxtMoveWhite = validCoordToList (validIACoords grid PlayerWhite 1)
+    nxtMoveBlack = validCoordToList (validIACoords grid PlayerBlack 1)
     alpha = (8 * (toInteger (minBound :: Int)))
     beta = (8 * (toInteger (maxBound :: Int)))
     miniMaxMap :: Integer -> [Coord] -> [Integer]
     miniMaxMap alph [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
       where
-        execMini = miniMax newGrid PlayerWhite depth alph beta newWhiteSco newBlackSco x
+        execMini = miniMax grid PlayerWhite depth alph beta whiteSco blackSco x
         alpha' = max alph execMini
         newXs =
           if beta <= alpha'
@@ -437,7 +439,7 @@ miniWrapper grid player depth whiteSco blackSco
     miniMaxMap2 bet [] = []
     miniMaxMap2 bet (x:xs) = execMini : miniMaxMap2 beta' newXs
       where
-        execMini = miniMax newGrid PlayerBlack depth alpha bet newWhiteSco newBlackSco x
+        execMini = miniMax grid PlayerBlack depth alpha bet whiteSco blackSco x
         beta' = min bet execMini
         newXs =
           if beta' <= alpha
