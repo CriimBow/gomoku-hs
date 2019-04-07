@@ -70,7 +70,7 @@ preScoringOneDirection countedDir dir space0 space5 exScoring
 
 preScoring :: [[Cell]] -> Player -> Coord -> ([Int], [Int]) -> ([Int], [Int])
 preScoring grid player move scoring =
-  scoringPos4
+  scoring5
   where
     spacePos :: (Int, Int) -> (Int, Int) -> (Int, Int)
     spacePos tupA tupB = (fst tupA + 2 * (fst tupB), snd tupA + 2 * (snd tupB))
@@ -81,6 +81,9 @@ preScoring grid player move scoring =
         | (fst move + fst (allDir !! idx)) > (hGoGrid - 1) || (snd move + snd (allDir !! idx)) > (hGoGrid - 1) = 0
         | grid !! (snd move + snd (allDir !! idx)) !! (fst move + fst (allDir !! idx)) == EmptyCell = countDirection grid player (spacePos move (allDir !! idx)) 0 (allDir !! idx)
         | otherwise = 0
+
+    addCaptureScoring :: ([Int], [Int]) -> Int -> ([Int], [Int])
+    addCaptureScoring ([f,g,h,i,j],[a,b,c,d,e]) nb = ([f,g,h,i,j],[a+nb,b,c,d,e])
 
     -- (0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (1, -1)
     dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
@@ -93,6 +96,7 @@ preScoring grid player move scoring =
     scoringPos2 = preScoringOneDirection countedDir (dirCouples !! 1) (spaceCount !! 1) (spaceCount !! 4) scoringPos1
     scoringPos3 = preScoringOneDirection countedDir (dirCouples !! 2) (spaceCount !! 2) (spaceCount !! 3) scoringPos2
     scoringPos4 = preScoringOneDirection countedDir (dirCouples !! 3) (spaceCount !! 6) (spaceCount !! 7) scoringPos3
+    scoring5 = addCaptureScoring scoringPos4 $ length (checkCapturToSup player move grid)
     
     
 scoringCalc :: ([Int], [Int]) -> Integer
@@ -106,6 +110,7 @@ scoringCalc scoring =
     score4 = 100000
     score5 = 10 *(toInteger (maxBound :: Int))
     score5' = (toInteger (maxBound :: Int)) - 1
+    scoreTaken = 10 *(toInteger (maxBound :: Int))
 
 --- diffScore blanc - noir
 --- blanc => maximiser la différence => tendre vers +infini
@@ -119,15 +124,16 @@ miniMax grid player depth alpha beta whiteSco blackSco move
   | player == PlayerWhite = minimum outBlack
   | otherwise = maximum outWhite
   where
-    newGrid = posePiece move player grid
+    newGrid' = posePiece move player grid
 
     newWhiteSco = if player == PlayerWhite
-                    then preScoring newGrid PlayerWhite move whiteSco
+                    then preScoring newGrid' PlayerWhite move whiteSco
                     else whiteSco
     newBlackSco = if player == PlayerBlack
-                    then preScoring newGrid PlayerBlack move blackSco
+                    then preScoring newGrid' PlayerBlack move blackSco
                     else blackSco
 
+    newGrid = posePieceAndDelete move player grid
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
     nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
     nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
@@ -162,14 +168,15 @@ miniWrapper grid player depth whiteSco blackSco move
  | player == PlayerBlack = nxtMoveWhite !! whiteRet
  | otherwise = nxtMoveBlack !! blackRet
  where
-   newGrid = posePiece move player grid
+   newGrid' = posePiece move player grid
    newWhiteSco = if player == PlayerWhite
-                   then preScoring newGrid PlayerWhite move whiteSco
+                   then preScoring newGrid' PlayerWhite move whiteSco
                    else whiteSco
    newBlackSco = if player == PlayerBlack
-                   then preScoring newGrid PlayerBlack move blackSco
+                   then preScoring newGrid' PlayerBlack move blackSco
                    else blackSco
 
+   newGrid = posePieceAndDelete move player grid
    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
 

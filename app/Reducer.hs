@@ -109,6 +109,13 @@ posePiece (cx, cy) p = imap upRow
         then playerToPiece p
         else c
 
+posePieceAndDelete :: Coord -> Player -> [[Cell]] -> [[Cell]]
+posePieceAndDelete cr p grd =
+  let withPiece = posePiece cr p grd
+      toSup = checkCapturToSup p cr withPiece
+      newGrd = supPosGrid withPiece toSup
+   in newGrd
+
 checkCaptur :: Coord -> AppState -> AppState
 checkCaptur cr s =
   let toSup = checkCapturToSup (playerTurn s) cr (goGrid s)
