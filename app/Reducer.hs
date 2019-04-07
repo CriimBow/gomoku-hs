@@ -153,13 +153,11 @@ supPosGrid = foldr supElGrd
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
   start <- getCPUTime
-  let mCoord = solver (goGrid s) (playerTurn s)
+  let mCoord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
   end <- getCPUTime
   let diff = fromIntegral (end - start) / (10 ^ 9)
   let withDiff = s {lastIATimeForPlay = diff}
-  case mCoord of
-    Nothing -> return withDiff
-    Just crd -> return (handelPlayCoord crd withDiff)
+  return (handelPlayCoord mCoord withDiff)
 
 suggestionPlay :: AppState -> IO AppState
 suggestionPlay s =
@@ -167,10 +165,10 @@ suggestionPlay s =
     then return s
     else do
       start <- getCPUTime
-      let coord = solver (goGrid s) (playerTurn s)
+      let coord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
       end <- getCPUTime
       let diff = fromIntegral (end - start) / (10 ^ 9)
-      return s {lastIATimeForPlay = diff, cursorSuggestion = coord}
+      return s {lastIATimeForPlay = diff, cursorSuggestion = Just (coord)}
 
 -- UTIL
 playerToPiece :: Player -> Cell
@@ -258,11 +256,11 @@ checkEnd cr s
 ------------
 -- SOLVER --
 ------------
-solver :: [[Cell]] -> Player -> Maybe Coord -- TODO
-solver grd p =
+solver :: [[Cell]] -> Player -> Int -> Int -> Coord
+solver grd p nbCapBlack nbCapWihte =
   let scoreBlack = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
       scoreWhite = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
-   in Just (miniWrapper grd p 3 scoreWhite scoreBlack (0, 0))
+   in miniWrapper grd p 3 scoreWhite scoreBlack (0, 0)
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
