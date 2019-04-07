@@ -457,4 +457,4 @@ miniWrapper grid player depth whiteSco blackSco
     outWhite = miniMaxMap alpha nxtMoveWhite
     outBlack = miniMaxMap2 beta nxtMoveBlack
     whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
-    blackRet = fromMaybe 0 (elemIndex (minimum outWhite) outBlack)
+    blackRet = fromMaybe 0 (elemIndex (minimum outBlack) outBlack)
