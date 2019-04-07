@@ -111,13 +111,13 @@ scoringCalc scoring =
 --- blanc => maximiser la différence => tendre vers +infini
 --- noir => minimiser la différence => tendre vers - infini
 
-miniMax :: [[Cell]] -> Player -> Int -> Int -> Integer -> Integer -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> (Integer, Coord)
-miniMax grid player depth initDepth alpha beta whiteSco blackSco move
+miniMax :: [[Cell]] -> Player -> Int -> Integer -> Integer -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> (Integer, Coord)
+miniMax grid player depth alpha beta whiteSco blackSco move
   | depth == 0 = (diffScore, move)
   | player == PlayerWhite && (length nxtMoveWhite) == 0 = (diffScore, move)
   | player == PlayerBlack && (length nxtMoveBlack) == 0 = (diffScore, move)
-  | depth == (initDepth - 1) && player == PlayerWhite = ((maximum (returnScores outWhite), move))
-  | depth == (initDepth - 1) && player == PlayerBlack = ((minimum (returnScores outWhite), move))
+  --- | depth == (initDepth - 1) && player == PlayerWhite = ((maximum (returnScores outBlack), move))
+  --- | depth == (initDepth - 1) && player == PlayerBlack = ((minimum (returnScores outWhite), move))
   | player == PlayerWhite = outBlack !! blackIdx
   | otherwise = outWhite !! whiteIdx
   where
@@ -134,64 +134,85 @@ miniMax grid player depth initDepth alpha beta whiteSco blackSco move
                     else blackSco
 
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
-    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 2)
-    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 2)
+    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
+    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
 
-    outWhite = map (miniMax newGrid PlayerWhite (depth - 1) initDepth alpha beta newWhiteSco newBlackSco) nxtMoveWhite
+    miniMaxMap :: Integer -> [Coord] -> [(Integer, Coord)]
+    miniMaxMap alph [] = []
+    miniMaxMap alph (x:xs) =
+       execMini : miniMaxMap alpha' newXs
+      where
+        execMini = miniMax newGrid PlayerWhite (depth - 1) alph beta newWhiteSco newBlackSco x
+        alpha' = max alph (fst execMini)
+        newXs = if beta <= alpha'
+                then []
+                else xs
+
+    miniMaxMap2 :: Integer -> [Coord] -> [(Integer, Coord)]
+    miniMaxMap2 bet [] = []
+    miniMaxMap2 bet (x:xs) =
+       execMini : miniMaxMap2 beta' newXs
+      where
+        execMini = miniMax newGrid PlayerBlack (depth - 1) alpha bet newWhiteSco newBlackSco x
+        beta' = min bet (fst execMini)
+        newXs = if beta' <= alpha
+                then []
+                else xs
+
+    outWhite = miniMaxMap alpha nxtMoveWhite
     -- [(123456, (0,0)), (1236, (0,2)), (14236, (1,2))]
-    outBlack = map (miniMax newGrid PlayerBlack (depth - 1) initDepth alpha beta newWhiteSco newBlackSco) nxtMoveBlack
+    outBlack = miniMaxMap2 beta nxtMoveBlack
 
     whiteIdx = fromMaybe 0 (elemIndex (maximum (returnScores outWhite)) (returnScores outWhite))
-
     blackIdx = fromMaybe 0 (elemIndex (minimum (returnScores outBlack)) (returnScores outBlack))
 
 
-
-miniMax2 :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> Integer
-miniMax2 grid player depth whiteSco blackSco move
-  | depth == 0 = diffScore
-  | player == PlayerWhite && (length nxtMoveWhite) == 0 = diffScore
-  | player == PlayerBlack && (length nxtMoveBlack) == 0 = diffScore
-  | player == PlayerWhite = maxEval
-  | otherwise = minEval
-  where
-    newGrid = posePiece move player grid
-
-    newWhiteSco = if player == PlayerWhite
-                    then preScoring newGrid PlayerWhite move whiteSco
-                    else whiteSco
-    newBlackSco = if player == PlayerBlack
-                    then preScoring newGrid PlayerBlack move blackSco
-                    else blackSco
-
-    diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
-    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 2)
-    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 2)
-
-    outWhite = map (miniMax2 newGrid PlayerBlack (depth - 1) newWhiteSco newBlackSco) nxtMoveWhite
-    outBlack = map (miniMax2 newGrid PlayerWhite (depth - 1) newWhiteSco newBlackSco) nxtMoveBlack
-
-    maxEval = maximum outWhite
-    minEval = minimum outBlack
-
-myWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> Coord
-myWrapper grid player depth whiteSco blackSco move
+bestWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> Coord
+bestWrapper grid player depth whiteSco blackSco move
  | player == PlayerBlack = nxtMoveWhite !! whiteRet
  | otherwise = nxtMoveBlack !! blackRet
-  where
-    newGrid = posePiece move player grid
-    newWhiteSco = if player == PlayerWhite
-                    then preScoring newGrid PlayerWhite move whiteSco
-                    else whiteSco
-    newBlackSco = if player == PlayerBlack
-                    then preScoring newGrid PlayerBlack move blackSco
-                    else blackSco
+ where
+   returnScores :: [(Integer, Coord)] -> [Integer]
+   returnScores out = [fst tuple | x <- [0 .. (length out - 1)], let tuple = out !! x]
+   newGrid = posePiece move player grid
+   newWhiteSco = if player == PlayerWhite
+                   then preScoring newGrid PlayerWhite move whiteSco
+                   else whiteSco
+   newBlackSco = if player == PlayerBlack
+                   then preScoring newGrid PlayerBlack move blackSco
+                   else blackSco
 
-    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 2)
-    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 2)
+   nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 2)
+   nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 2)
 
-    outWhite = map (miniMax2 newGrid PlayerWhite depth newWhiteSco newBlackSco) nxtMoveWhite
-    outBlack = map (miniMax2 newGrid PlayerBlack depth newWhiteSco newBlackSco) nxtMoveBlack
+   alpha = (8 *(toInteger (minBound :: Int)))
+   beta = (8 *(toInteger (maxBound :: Int)))
 
-    whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
-    blackRet = fromMaybe 0 (elemIndex (minimum outWhite) outBlack)
+   miniMaxMap :: Integer -> [Coord] -> [(Integer, Coord)]
+   miniMaxMap alph [] = []
+   miniMaxMap alph (x:xs) =
+      execMini : miniMaxMap alpha' newXs
+     where
+       execMini = miniMax newGrid PlayerWhite depth alph beta newWhiteSco newBlackSco x
+       alpha' = max alph (fst execMini)
+       newXs = if beta <= alpha'
+               then []
+               else xs
+
+   miniMaxMap2 :: Integer -> [Coord] -> [(Integer, Coord)]
+   miniMaxMap2 bet [] = []
+   miniMaxMap2 bet (x:xs) =
+      execMini : miniMaxMap2 beta' newXs
+     where
+       execMini = miniMax newGrid PlayerBlack depth alpha bet newWhiteSco newBlackSco x
+       beta' = min bet (fst execMini)
+       newXs = if beta' <= alpha
+               then []
+               else xs
+
+   outWhite = miniMaxMap alpha nxtMoveWhite
+   outBlack = miniMaxMap2 beta nxtMoveBlack
+
+   whiteRet = fromMaybe 0 (elemIndex (maximum (returnScores outWhite)) (returnScores outWhite))
+   blackRet = fromMaybe 0 (elemIndex (minimum (returnScores outWhite)) (returnScores outBlack))
+
