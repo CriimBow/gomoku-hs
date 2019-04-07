@@ -3,10 +3,8 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.Lens.Combinators (imap)
 import Data.List (elemIndex)
-import Data.Maybe (isJust, isNothing)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Debug.Trace (trace, traceIO, traceShow)
-import Debug.Trace (trace)
 import System.CPUTime
 import System.Random (Random(..), newStdGen)
 
@@ -260,7 +258,7 @@ solver :: [[Cell]] -> Player -> Int -> Int -> Coord
 solver grd p nbCapBlack nbCapWihte =
   let scoreBlack = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
       scoreWhite = ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0])
-   in miniWrapper grd p 3 scoreWhite scoreBlack (0, 0)
+   in miniWrapper grd p 3 scoreWhite scoreBlack
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
@@ -416,21 +414,11 @@ miniMax grid player depth alpha beta whiteSco blackSco move
     outWhite = miniMaxMap alpha nxtMoveWhite
     outBlack = miniMaxMap2 beta nxtMoveBlack
 
-miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> Coord
-miniWrapper grid player depth whiteSco blackSco move
+miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord
+miniWrapper grid player depth whiteSco blackSco
   | player == PlayerBlack = nxtMoveWhite !! whiteRet
   | otherwise = nxtMoveBlack !! blackRet
   where
-    newGrid' = posePiece move player grid
-    newWhiteSco =
-      if player == PlayerWhite
-        then preScoring newGrid' PlayerWhite move whiteSco
-        else whiteSco
-    newBlackSco =
-      if player == PlayerBlack
-        then preScoring newGrid' PlayerBlack move blackSco
-        else blackSco
-    newGrid = posePieceAndDelete move player grid
     nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
     nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
     alpha = (8 * (toInteger (minBound :: Int)))
