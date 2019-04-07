@@ -46,6 +46,7 @@ executables:
       - random
       - transformers
       - vty
+      - deepseq
 
 tests:
   gomoku-test:

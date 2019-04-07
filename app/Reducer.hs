@@ -1,11 +1,13 @@
 module Reducer where
 
 import Constant (allDir, hGoGrid)
+import Control.DeepSeq
 import Control.Lens.Combinators (imap)
 import Data.List (elemIndex)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
+import System.IO
 import System.Random (Random(..), newStdGen)
 
 -- TYPES STATE
@@ -152,7 +154,7 @@ handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
   start <- getCPUTime
   let mCoord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
-  end <- getCPUTime
+  end <- mCoord `deepseq` getCPUTime
   let diff = fromIntegral (end - start) / (10 ^ 9)
   let withDiff = s {lastIATimeForPlay = diff}
   return (handelPlayCoord mCoord withDiff)
@@ -164,7 +166,7 @@ suggestionPlay s =
     else do
       start <- getCPUTime
       let coord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
-      end <- getCPUTime
+      end <- coord `deepseq` getCPUTime
       let diff = fromIntegral (end - start) / (10 ^ 9)
       return s {lastIATimeForPlay = diff, cursorSuggestion = Just (coord)}
 
@@ -219,8 +221,12 @@ distEmptyCellMap grd maxDist =
     addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
     checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
     checkNeighbour grd x y =
-      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y ||
-      checkPos grd (x + 1) (y + 1) || checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
+      checkPos grd (x + 1) y ||
+      checkPos grd x (y + 1) ||
+      checkPos grd x (y - 1) ||
+      checkPos grd (x - 1) y ||
+      checkPos grd (x + 1) (y + 1) ||
+      checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
     checkPos :: [[Bool]] -> Int -> Int -> Bool
     checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
 
@@ -355,8 +361,10 @@ preScoring grid player move scoring = scoring5
 
 scoringCalc :: ([Int], [Int]) -> Integer
 scoringCalc scoring =
-  a * score1 + b * score2 + c * score3 + d * score4 + e * score5 + g * (score2 - 1) +
-  h * (score3 - 1) + i * (score4 - 1) +  j * (score5' - 1) + scoreTaken
+  a * score1 + b * score2 + c * score3 + d * score4 + e * score5 + g * (score2 - 1) + h * (score3 - 1) +
+  i * (score4 - 1) +
+  j * (score5' - 1) +
+  scoreTaken
   where
     ([a, b, c, d, e], [f, g, h, i, j]) = (map toInteger (fst scoring), map toInteger (snd scoring))
     score1 = 1
@@ -365,9 +373,10 @@ scoringCalc scoring =
     score4 = 100000
     score5 = 10 * (toInteger (maxBound :: Int))
     score5' = (toInteger (maxBound :: Int)) - 1
-    scoreTaken = if f == 5
-                  then 10 * (toInteger (maxBound :: Int)) + 1
-                  else 100000 * f
+    scoreTaken =
+      if f == 5
+        then 10 * (toInteger (maxBound :: Int)) + 1
+        else 100000 * f
 
 --- diffScore blanc - noir
 --- blanc => maximiser la différence => tendre vers +infini

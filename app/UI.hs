@@ -60,12 +60,15 @@ drawGame R.GameState { R.goGrid = grd
     wCmd =
       padAll 1 $
       vBox
-        [ padTop (Pad 5) $ padBottom (Pad 1) $ str "Commands:"
+        [ padTop (Pad 4) $ padBottom (Pad 1) $ str "Commands:"
         , str "Key Right: Right"
         , str "Key Up: Up"
         , str "Key Down: Down"
         , str "Key Left: Left"
         , padTop (Pad 1) $ str "ENTER: Pose a piece"
+        , str "Key s: Suggestion play"
+        , padTop (Pad 1) $ str "ESC: Quit the game"
+        , str "Key q: Go menu"
         ]
     -- INFO
     wInfo :: Widget Name
