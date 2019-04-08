@@ -298,8 +298,6 @@ worthMoveIA grid move = elem True render
     removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
     removeCoordIA grid move direction = moreThanOne grid (sumTuples move direction) 0 direction
     sumDir = map (removeCoordIA grid move) allDir
-
-    --- [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
     render = [(isTrue >= 2) | x <- dirCouples, let isTrue = (sumDir !! (fst x)) + (sumDir !! (snd x))]
 
 
