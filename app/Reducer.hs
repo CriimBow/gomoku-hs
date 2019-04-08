@@ -258,6 +258,10 @@ checkEnd cr s
        in (0 /= length (filter (== 5) tmp))
     checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
 
+
+sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
+sumTuples tupA tupB = (fst tupA + fst tupB, snd tupA + snd tupB)
+
 ------------
 -- SOLVER --
 ------------
@@ -276,8 +280,30 @@ countDirection grid player move count direction
   where
     playerPiece = playerToPiece player
     gridPiece = grid !! snd move !! fst move
-    sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
-    sumTuples tupA tupB = (fst tupA + fst tupB, snd tupA + snd tupB)
+
+moreThanOne :: [[Cell]] -> Coord -> Int -> (Int, Int) -> Int
+moreThanOne grid move count direction
+  | (count > 1) = 2
+  | 0 > fst move || 0 > snd move = count
+  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
+  | EmptyCell == gridPiece = count
+  | otherwise = moreThanOne grid (sumTuples move direction) (count + 1) direction
+  where
+    gridPiece = grid !! snd move !! fst move
+
+worthMoveIA :: [[Cell]] -> Coord -> Bool
+worthMoveIA grid move = elem True render
+  where
+    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
+    removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
+    removeCoordIA grid move direction = moreThanOne grid (sumTuples move direction) 0 direction
+    sumDir = map (removeCoordIA grid move) allDir
+
+    --- [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
+    render = [(isTrue >= 2) | x <- dirCouples, let isTrue = (sumDir !! (fst x)) + (sumDir !! (snd x))]
+
+
+
 
 addNoSpaceScoring :: Int -> ([Int], [Int]) -> ([Int], [Int])
 addNoSpaceScoring addSpace ([a, b, c, d, e], [f, g, h, i, j]) = (new, [f, g, h, i, j])
@@ -400,8 +426,12 @@ miniMax grid player depth alpha beta whiteSco blackSco move
         else blackSco
     newGrid = posePieceAndDelete move player grid
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
+
     nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
     nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
+    nxtMoveWhite' = filter (worthMoveIA newGrid) nxtMoveWhite
+    nxtMoveBlack' = filter (worthMoveIA newGrid) nxtMoveBlack
+
     miniMaxMap :: Integer -> [Coord] -> [Integer]
     miniMaxMap alph [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
@@ -422,16 +452,26 @@ miniMax grid player depth alpha beta whiteSco blackSco move
           if beta' <= alpha
             then []
             else xs
-    outWhite = miniMaxMap alpha nxtMoveWhite
-    outBlack = miniMaxMap2 beta nxtMoveBlack
+
+    outWhite = if (null nxtMoveWhite')
+                then miniMaxMap alpha nxtMoveWhite
+                else miniMaxMap alpha nxtMoveWhite'
+    outBlack = if (null nxtMoveBlack')
+                then miniMaxMap2 beta nxtMoveBlack
+                else miniMaxMap2 beta nxtMoveBlack'
 
 miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord
 miniWrapper grid player depth whiteSco blackSco
-  | player == PlayerBlack = nxtMoveWhite !! whiteRet
-  | otherwise = nxtMoveBlack !! blackRet
+  | player == PlayerBlack && (null nxtMoveWhite') = nxtMoveWhite !! whiteRet
+  | player == PlayerBlack = nxtMoveWhite' !! whiteRet
+  | player == PlayerWhite && (null nxtMoveBlack') = nxtMoveBlack !! blackRet
+  | otherwise = nxtMoveBlack' !! blackRet
   where
     nxtMoveWhite = validCoordToList (validIACoords grid PlayerWhite 1)
     nxtMoveBlack = validCoordToList (validIACoords grid PlayerBlack 1)
+    nxtMoveWhite' = filter (worthMoveIA grid) nxtMoveWhite
+    nxtMoveBlack' = filter (worthMoveIA grid) nxtMoveBlack
+
     alpha = (8 * (toInteger (minBound :: Int)))
     beta = (8 * (toInteger (maxBound :: Int)))
     miniMaxMap :: Integer -> [Coord] -> [Integer]
@@ -454,7 +494,11 @@ miniWrapper grid player depth whiteSco blackSco
           if beta' <= alpha
             then []
             else xs
-    outWhite = miniMaxMap alpha nxtMoveWhite
-    outBlack = miniMaxMap2 beta nxtMoveBlack
+    outWhite = if (null nxtMoveWhite')
+                then miniMaxMap alpha nxtMoveWhite
+                else miniMaxMap alpha nxtMoveWhite'
+    outBlack = if (null nxtMoveBlack')
+                then miniMaxMap2 beta nxtMoveBlack
+                else miniMaxMap2 beta nxtMoveBlack'
     whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
     blackRet = fromMaybe 0 (elemIndex (minimum outBlack) outBlack)
