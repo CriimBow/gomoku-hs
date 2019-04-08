@@ -237,12 +237,12 @@ delDoubleThree grd p grd_dist =
     delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
     delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
--- False if is dist <= maxDist
+-- True if is dist <= maxDist
 distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
 distEmptyCellMap grd maxDist =
   let initMap = map (map (== EmptyCell)) grd
       iterator = [1 .. maxDist]
-   in foldr (\_ b -> addDist1 b) initMap iterator
+   in map (map not) $ foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
     addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
@@ -260,8 +260,10 @@ distEmptyCellMap grd maxDist =
 -- /!\ no valide play if the map is Empty!
 validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
 validIACoords grd p d =
-  let grd_dist = map (map not) $ distEmptyCellMap grd d
-      v = delDoubleThree grd p grd_dist
+  let empty = map (map (== EmptyCell)) grd
+      grd_dist = distEmptyCellMap grd d
+      emptyAndDist = [[empty !! y !! x && grd_dist !! y !! x | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      v = delDoubleThree grd p emptyAndDist
    in v
 
 solver :: [[Cell]] -> Player -> Int -> Int -> Coord
