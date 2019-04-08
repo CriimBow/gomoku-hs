@@ -47,6 +47,8 @@ executables:
       - transformers
       - vty
       - deepseq
+      - split
+      - parallel
 
 tests:
   gomoku-test:

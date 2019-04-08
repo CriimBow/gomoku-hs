@@ -3,7 +3,9 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.DeepSeq
 import Control.Lens.Combinators (imap)
+import Control.Parallel (par)
 import Data.List (elemIndex)
+import Data.List.Split (chunksOf)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
@@ -495,6 +497,8 @@ miniWrapper grid player depth whiteSco blackSco
     outWhite = if (null nxtMoveWhite')
                 then miniMaxMap alpha nxtMoveWhite
                 else miniMaxMap alpha nxtMoveWhite'
+    --- outSplitWhite =
+
     outBlack = if (null nxtMoveBlack')
                 then miniMaxMap2 beta nxtMoveBlack
                 else miniMaxMap2 beta nxtMoveBlack'

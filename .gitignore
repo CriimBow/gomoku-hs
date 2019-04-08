@@ -3,3 +3,6 @@ gomoku.cabal
 *~
 .idea/
 *.iml
+*example*
+example*
+*log
