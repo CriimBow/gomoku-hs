@@ -179,63 +179,12 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
+-- can use delDoubleThree
 validCoords :: [[Cell]] -> Player -> [[Bool]]
-validCoords grd p =
-  let emptyCells = map (map (== EmptyCell)) grd
-      msk = (maskCoef $ playerToPiece p)
-   in [[emptyCells !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-  where
-    maskCoef pc =
-      [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
-      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
-      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (1, EmptyCell)]
-      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
-      , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
-      ]
-    checkDoubleThree grd msk cr = checkAllPos grd $ allDir >>= genPosCheck msk cr
-    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
-    genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
-    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
-    checkAllPos grd lpos =
-      let tmp = map snd $ filter (checkLPos grd) lpos
-          dDir = foldr delDir [] tmp
-       in 1 >= length dDir
-    checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
-    checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
-    checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
-    checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
-    delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
-    delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
+validCoords grd p = delDoubleThree grd p (map (map (== EmptyCell)) grd)
 
 validCoord :: [[Cell]] -> Player -> Coord -> Bool
 validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
-
--- False if is dist <= maxDist
-distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
-distEmptyCellMap grd maxDist =
-  let initMap = map (map (== EmptyCell)) grd
-      iterator = [1 .. maxDist]
-   in foldr (\_ b -> addDist1 b) initMap iterator
-  where
-    addDist1 :: [[Bool]] -> [[Bool]]
-    addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-    checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
-    checkNeighbour grd x y =
-      checkPos grd (x + 1) y ||
-      checkPos grd x (y + 1) ||
-      checkPos grd x (y - 1) ||
-      checkPos grd (x - 1) y ||
-      checkPos grd (x + 1) (y + 1) ||
-      checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
-    checkPos :: [[Bool]] -> Int -> Int -> Bool
-    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
-
--- /!\ no valide play if the map is Empty!
-validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
-validIACoords grd p d =
-  let v = validCoords grd p
-      gd = distEmptyCellMap grd d
-   in [[v !! y !! x && not (gd !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
 
 validCoordToList :: [[Bool]] -> [(Int, Int)]
 validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
@@ -261,6 +210,60 @@ checkEnd cr s
 ------------
 -- SOLVER --
 ------------
+delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
+delDoubleThree grd p grd_dist =
+  let msk = (maskCoef $ playerToPiece p)
+   in [[grd_dist !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+  where
+    maskCoef pc =
+      [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
+      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
+      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (1, EmptyCell)]
+      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
+      , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
+      ]
+    checkDoubleThree grd msk cr = checkAllPos grd $ allDir >>= genPosCheck msk cr
+    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
+    genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
+    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
+    checkAllPos grd lpos =
+      let tmp = map snd $ filter (checkLPos grd) lpos
+          dDir = foldr delDir [] tmp
+       in 1 >= length dDir
+    checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
+    checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
+    checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
+    checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
+    delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+    delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
+
+-- False if is dist <= maxDist
+distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
+distEmptyCellMap grd maxDist =
+  let initMap = map (map (== EmptyCell)) grd
+      iterator = [1 .. maxDist]
+   in foldr (\_ b -> addDist1 b) initMap iterator
+  where
+    addDist1 :: [[Bool]] -> [[Bool]]
+    addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
+    checkNeighbour grd x y =
+      checkPos grd (x + 1) y ||
+      checkPos grd x (y + 1) ||
+      checkPos grd x (y - 1) ||
+      checkPos grd (x - 1) y ||
+      checkPos grd (x + 1) (y + 1) ||
+      checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
+    checkPos :: [[Bool]] -> Int -> Int -> Bool
+    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
+
+-- /!\ no valide play if the map is Empty!
+validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
+validIACoords grd p d =
+  let grd_dist = map (map not) $ distEmptyCellMap grd d
+      v = delDoubleThree grd p grd_dist
+   in v
+
 solver :: [[Cell]] -> Player -> Int -> Int -> Coord
 solver grd p nbCapBlack nbCapWihte =
   let scoreBlack = ([0, 0, 0, 0, 0], [(div nbCapBlack 2), 0, 0, 0, 0])
