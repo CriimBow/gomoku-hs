@@ -434,10 +434,16 @@ miniMax grid player depth alpha beta whiteSco blackSco move
     newGrid = posePieceAndDelete move player grid
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
 
-    nxtMoveWhite = validCoordToList (validIACoords newGrid PlayerWhite 1)
-    nxtMoveBlack = validCoordToList (validIACoords newGrid PlayerBlack 1)
-    nxtMoveWhite' = filter (worthMoveIA newGrid) nxtMoveWhite
-    nxtMoveBlack' = filter (worthMoveIA newGrid) nxtMoveBlack
+    nxtMoveWhite = let moves = validCoordToList (validIACoords newGrid PlayerWhite 1)
+                       optiMoves = filter (worthMoveIA newGrid) moves
+                   in if (null optiMoves)
+                      then moves
+                      else optiMoves
+    nxtMoveBlack = let moves = validCoordToList (validIACoords newGrid PlayerBlack 1)
+                       optiMoves = filter (worthMoveIA newGrid) moves
+                   in if (null optiMoves)
+                      then moves
+                      else optiMoves
 
     miniMaxMap :: Integer -> [Coord] -> [Integer]
     miniMaxMap alph [] = []
@@ -460,24 +466,26 @@ miniMax grid player depth alpha beta whiteSco blackSco move
             then []
             else xs
 
-    outWhite = if (null nxtMoveWhite')
-                then miniMaxMap alpha nxtMoveWhite
-                else miniMaxMap alpha nxtMoveWhite'
-    outBlack = if (null nxtMoveBlack')
-                then miniMaxMap2 beta nxtMoveBlack
-                else miniMaxMap2 beta nxtMoveBlack'
+    outWhite = miniMaxMap alpha nxtMoveWhite
+    outBlack = miniMaxMap2 beta nxtMoveBlack
+
 
 miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord
 miniWrapper grid player depth whiteSco blackSco
-  | player == PlayerBlack && (null nxtMoveWhite') = nxtMoveWhite !! whiteRet
-  | player == PlayerBlack = nxtMoveWhite' !! whiteRet
-  | player == PlayerWhite && (null nxtMoveBlack') = nxtMoveBlack !! blackRet
-  | otherwise = nxtMoveBlack' !! blackRet
+  | player == PlayerBlack = nxtMoveWhite !! whiteRet
+  | otherwise = nxtMoveBlack !! blackRet
   where
-    nxtMoveWhite = validCoordToList (validIACoords grid PlayerWhite 1)
-    nxtMoveBlack = validCoordToList (validIACoords grid PlayerBlack 1)
-    nxtMoveWhite' = filter (worthMoveIA grid) nxtMoveWhite
-    nxtMoveBlack' = filter (worthMoveIA grid) nxtMoveBlack
+    nxtMoveWhite = let moves = validCoordToList (validIACoords grid PlayerWhite 1)
+                       optiMoves = filter (worthMoveIA grid) moves
+                   in if (null optiMoves)
+                      then moves
+                      else optiMoves
+
+    nxtMoveBlack = let moves = validCoordToList (validIACoords grid PlayerBlack 1)
+                       optiMoves = filter (worthMoveIA grid) moves
+                   in if (null optiMoves)
+                      then moves
+                      else optiMoves
 
     alpha = (8 * (toInteger (minBound :: Int)))
     beta = (8 * (toInteger (maxBound :: Int)))
@@ -501,13 +509,8 @@ miniWrapper grid player depth whiteSco blackSco
           if beta' <= alpha
             then []
             else xs
-    outWhite = if (null nxtMoveWhite')
-                then miniMaxMap alpha nxtMoveWhite
-                else miniMaxMap alpha nxtMoveWhite'
-    --- outSplitWhite =
 
-    outBlack = if (null nxtMoveBlack')
-                then miniMaxMap2 beta nxtMoveBlack
-                else miniMaxMap2 beta nxtMoveBlack'
+    outWhite = miniMaxMap alpha nxtMoveWhite
+    outBlack = miniMaxMap2 beta nxtMoveBlack
     whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
     blackRet = fromMaybe 0 (elemIndex (minimum outBlack) outBlack)
