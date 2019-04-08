@@ -181,11 +181,41 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
+-- can use delDoubleThree
 validCoords :: [[Cell]] -> Player -> [[Bool]]
-validCoords grd p =
-  let emptyCells = map (map (== EmptyCell)) grd
-      msk = (maskCoef $ playerToPiece p)
-   in [[emptyCells !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+validCoords grd p = delDoubleThree grd p (map (map (== EmptyCell)) grd)
+
+validCoord :: [[Cell]] -> Player -> Coord -> Bool
+validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
+
+validCoordToList :: [[Bool]] -> [(Int, Int)]
+validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
+
+checkEnd :: Coord -> AppState -> AppState
+checkEnd cr s
+  | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
+  | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
+  | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
+  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ validCoords (goGrid s) (playerTurn s)) =
+    s {end = Just Nothing}
+  | otherwise = s
+  where
+    checkAlign5 (cx, cy) grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
+    maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
+    genPosCheck :: Coord -> Coord -> [[Coord]]
+    genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
+    checkAllPos grd p lpos =
+      let tmp = map (length . filter (checkPos grd p)) lpos
+       in (0 /= length (filter (== 5) tmp))
+    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
+
+------------
+-- SOLVER --
+------------
+delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
+delDoubleThree grd p grd_dist =
+  let msk = (maskCoef $ playerToPiece p)
+   in [[grd_dist !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
   where
     maskCoef pc =
       [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
@@ -209,15 +239,12 @@ validCoords grd p =
     delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
     delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
-validCoord :: [[Cell]] -> Player -> Coord -> Bool
-validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
-
--- False if is dist <= maxDist
+-- True if is dist <= maxDist
 distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
 distEmptyCellMap grd maxDist =
   let initMap = map (map (== EmptyCell)) grd
       iterator = [1 .. maxDist]
-   in foldr (\_ b -> addDist1 b) initMap iterator
+   in map (map not) $ foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
     addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
@@ -235,31 +262,11 @@ distEmptyCellMap grd maxDist =
 -- /!\ no valide play if the map is Empty!
 validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
 validIACoords grd p d =
-  let v = validCoords grd p
-      gd = distEmptyCellMap grd d
-   in [[v !! y !! x && not (gd !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-
-validCoordToList :: [[Bool]] -> [(Int, Int)]
-validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
-
-checkEnd :: Coord -> AppState -> AppState
-checkEnd cr s
-  | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
-  | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
-  | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
-  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ validCoords (goGrid s) (playerTurn s)) =
-    s {end = Just Nothing}
-  | otherwise = s
-  where
-    checkAlign5 (cx, cy) grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
-    maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
-    genPosCheck :: Coord -> Coord -> [[Coord]]
-    genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
-    checkAllPos grd p lpos =
-      let tmp = map (length . filter (checkPos grd p)) lpos
-       in (0 /= length (filter (== 5) tmp))
-    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
-
+  let empty = map (map (== EmptyCell)) grd
+      grd_dist = distEmptyCellMap grd d
+      emptyAndDist = [[empty !! y !! x && grd_dist !! y !! x | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      v = delDoubleThree grd p emptyAndDist
+   in v
 
 sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
 sumTuples tupA tupB = (fst tupA + fst tupB, snd tupA + snd tupB)
@@ -271,7 +278,7 @@ solver :: [[Cell]] -> Player -> Int -> Int -> Coord
 solver grd p nbCapBlack nbCapWihte =
   let scoreBlack = ([0, 0, 0, 0, 0], [(div nbCapBlack 2), 0, 0, 0, 0])
       scoreWhite = ([0, 0, 0, 0, 0], [(div nbCapWihte 2), 0, 0, 0, 0])
-   in miniWrapper grd p 2 scoreWhite scoreBlack
+   in miniWrapper grd p 3 scoreWhite scoreBlack
 
 countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
 countDirection grid player move count direction
@@ -402,7 +409,7 @@ scoringCalc scoring =
     scoreTaken =
       if f == 5
         then 10 * (toInteger (maxBound :: Int)) + 1
-        else 100000 * f
+        else 1000000 * f
 
 --- diffScore blanc - noir
 --- blanc => maximiser la différence => tendre vers +infini
