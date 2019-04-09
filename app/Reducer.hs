@@ -280,92 +280,7 @@ solver grd p nbCapBlack nbCapWihte =
       scoreWhite = ([0, 0, 0, 0, 0], [(div nbCapWihte 2), 0, 0, 0, 0])
    in miniWrapper grd p 3 scoreWhite scoreBlack
 
-countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
-countDirection grid player move count direction
-  | 0 > fst move || 0 > snd move = count
-  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
-  | playerPiece /= gridPiece = count
-  | otherwise = countDirection grid player (sumTuples move direction) (count + 1) direction
-  where
-    playerPiece = playerToPiece player
-    gridPiece = grid !! snd move !! fst move
-
-moreThanOne :: [[Cell]] -> Coord -> Int -> (Int, Int) -> Int
-moreThanOne grid move count direction
-  | (count > 1) = 2
-  | 0 > fst move || 0 > snd move = count
-  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
-  | EmptyCell == gridPiece = count
-  | otherwise = moreThanOne grid (sumTuples move direction) (count + 1) direction
-  where
-    gridPiece = grid !! snd move !! fst move
-
-worthMoveIA :: [[Cell]] -> Coord -> Bool
-worthMoveIA grid move = elem True render
-  where
-    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
-    removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
-    removeCoordIA grid move direction = moreThanOne grid (sumTuples move direction) 0 direction
-    sumDir = map (removeCoordIA grid move) allDir
-    render = [(isTrue >= 2) | x <- dirCouples, let isTrue = (sumDir !! (fst x)) + (sumDir !! (snd x))]
-
-
-
-
-addNoSpaceScoring :: Int -> ([Int], [Int]) -> ([Int], [Int])
-addNoSpaceScoring addSpace ([a, b, c, d, e], [f, g, h, i, j]) = (new, [f, g, h, i, j])
-  where
-    new
-      | addSpace == 1 = [a + 1, b, c, d, e]
-      | addSpace == 2 = [a, b + 1, c, d, e]
-      | addSpace == 3 = [a, b, c + 1, d, e]
-      | addSpace == 4 = [a, b, c, d + 1, e]
-      | addSpace >= 5 = [a, b, c, d, e + 1]
-      | otherwise = [a, b, c, d, e]
-
-addSpaceScoring :: Int -> ([Int], [Int]) -> ([Int], [Int])
-addSpaceScoring addSpace ([f, g, h, i, j], [a, b, c, d, e]) = ([f, g, h, i, j], new)
-  where
-    new
-      | addSpace == 1 = [a + 1, b, c, d, e]
-      | addSpace == 2 = [a, b + 1, c, d, e]
-      | addSpace == 3 = [a, b, c + 1, d, e]
-      | addSpace == 4 = [a, b, c, d + 1, e]
-      | addSpace >= 5 = [a, b, c, d, e + 1]
-      | otherwise = [a, b, c, d, e]
-
-preScoringOneDirection :: [Int] -> (Int, Int) -> Int -> Int -> ([Int], [Int]) -> ([Int], [Int])
-preScoringOneDirection countedDir dir space0 space5 exScoring
-  -- 1
-  | and [((countedDir !! (fst dir)) > 1), ((countedDir !! (snd dir)) > 1)] =
-    addNoSpaceScoring ((countedDir !! (fst dir)) + (countedDir !! (snd dir)) - 1) exScoring
-  -- 3 - 1
-  | and [((countedDir !! (fst dir)) == 1), ((countedDir !! (snd dir)) > 1), (space0 == 0)] =
-    addNoSpaceScoring ((countedDir !! (fst dir)) + (countedDir !! (snd dir)) - 1) exScoring
-  -- 3 - 2
-  | and [((countedDir !! (fst dir)) > 1), ((countedDir !! (snd dir)) == 1), (space5 == 0)] =
-    addNoSpaceScoring ((countedDir !! (fst dir)) + (countedDir !! (snd dir)) - 1) exScoring
-  | otherwise = scoringOneD'
-  where
-    scoringOneD'
-        -- 5
-      | and [((countedDir !! (fst dir)) == 1), ((countedDir !! (snd dir)) == 1), (space0 > 0), (space5 > 0)] =
-        addSpaceScoring (space0 + 1) (addSpaceScoring (space5 + 1) exScoring)
-        -- 4 - 1
-      | and [((countedDir !! (fst dir)) == 1), ((countedDir !! (snd dir)) == 1), (space0 >= 1)] =
-        addSpaceScoring (space0 + 1) exScoring
-        -- 4 - 2
-      | and [((countedDir !! (fst dir)) == 1), ((countedDir !! (snd dir)) == 1), (space5 >= 1)] =
-        addSpaceScoring (space5 + 1) exScoring
-        -- 6 - 1
-      | and [((countedDir !! (fst dir)) > 1), ((countedDir !! (snd dir)) == 1), (space5 >= 1)] =
-        addSpaceScoring ((countedDir !! (fst dir)) + space5) (addNoSpaceScoring (countedDir !! (fst dir)) exScoring)
-        -- 6 - 2
-      | and [((countedDir !! (fst dir)) == 1), ((countedDir !! (snd dir)) > 1), (space0 >= 1)] =
-        addSpaceScoring ((countedDir !! (snd dir)) + space0) (addNoSpaceScoring (countedDir !! (snd dir)) exScoring)
-        -- 2
-      | otherwise = addNoSpaceScoring 1 exScoring
-
+{-
 preScoring :: [[Cell]] -> Player -> Coord -> ([Int], [Int]) -> ([Int], [Int])
 preScoring grid player move scoring = scoring5
   where
@@ -391,6 +306,76 @@ preScoring grid player move scoring = scoring5
     scoringPos3 = preScoringOneDirection countedDir (dirCouples !! 2) (spaceCount !! 2) (spaceCount !! 3) scoringPos2
     scoringPos4 = preScoringOneDirection countedDir (dirCouples !! 3) (spaceCount !! 6) (spaceCount !! 7) scoringPos3
     scoring5 = addCaptureScoring scoringPos4 $ length (checkCapturToSup player move grid)
+
+-}
+{-
+countDirection :: [[Cell]] -> Player -> Coord -> Int -> (Int, Int) -> Int
+countDirection grid player move count direction
+  | 0 > fst move || 0 > snd move = count
+  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
+  | playerPiece /= gridPiece = count
+  | otherwise = countDirection grid player (sumTuples move direction) (count + 1) direction
+  where
+    playerPiece = playerToPiece player
+    gridPiece = grid !! snd move !! fst move
+-}
+
+countDir :: [[Cell]] -> Player -> Coord -> (Int, Int) -> Int
+countDir grid player (cx, cy) (dx, dy) =
+  let (_, nb) = foldl sumDist (True, 0) [1 .. 4]
+   in nb
+  where
+    sumDist (b, nb) d =
+      let (cx', cy') = (cx + d * dx, cy + d * dy)
+       in if b && 0 <= cx' && 0 <= cy' && hGoGrid > cx' && hGoGrid > cy' && grid !! cy' !! cx' == playerToPiece player
+            then (True, nb + 1)
+            else (False, nb)
+
+
+moveSoring :: [[Cell]] -> Int -> Int -> Player -> Coord -> Int
+moveSoring grid capWhite capBlack player move =
+  let countedDir = map (countDir grid player move) allDir
+      sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
+      newCap = 2 * length (checkCapturToSup player move grid)
+      nbCap = if player == PlayerWhite
+              then capWhite + newCap
+              else capBlack + newCap
+
+      scoreCapture = if nbCap == 10
+                     then 1000000
+                     else 10000 * nbCap
+      score = scoreCapture + foldl transformToScore 0 sumSameDir
+   in score
+  where
+    countToScore count
+      | count <= 1 = 0
+      | count == 2 = 10
+      | count == 3 = 100
+      | count == 4 = 1000
+      | otherwise = 100000
+    transformToScore :: Int -> Int -> Int
+    transformToScore precSco count = precSco + countToScore count
+
+--- if int < 0
+moreThanOne :: [[Cell]] -> Coord -> Int -> (Int, Int) -> Int
+moreThanOne grid move count direction
+  | (count > 1) = 2
+  | 0 > fst move || 0 > snd move = count
+  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
+  | EmptyCell == gridPiece = count
+  | otherwise = moreThanOne grid (sumTuples move direction) (count + 1) direction
+  where
+    gridPiece = grid !! snd move !! fst move
+
+
+worthMoveIA :: [[Cell]] -> Coord -> Bool
+worthMoveIA grid move = True `elem` render
+  where
+    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
+    removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
+    removeCoordIA grid move direction = moreThanOne grid (sumTuples move direction) 0 direction
+    sumDir = map (removeCoordIA grid move) allDir
+    render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
 
 scoringCalc :: ([Int], [Int]) -> Integer
 scoringCalc scoring =
@@ -433,18 +418,18 @@ miniMax grid player depth alpha beta whiteSco blackSco move
         else blackSco
     newGrid = posePieceAndDelete move player grid
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
-
-    nxtMoveWhite = let moves = validCoordToList (validIACoords newGrid PlayerWhite 1)
-                       optiMoves = filter (worthMoveIA newGrid) moves
-                   in if (null optiMoves)
-                      then moves
-                      else optiMoves
-    nxtMoveBlack = let moves = validCoordToList (validIACoords newGrid PlayerBlack 1)
-                       optiMoves = filter (worthMoveIA newGrid) moves
-                   in if (null optiMoves)
-                      then moves
-                      else optiMoves
-
+    nxtMoveWhite =
+      let moves = validCoordToList (validIACoords newGrid PlayerWhite 1)
+          optiMoves = filter (worthMoveIA newGrid) moves
+       in if (null optiMoves)
+            then moves
+            else optiMoves
+    nxtMoveBlack =
+      let moves = validCoordToList (validIACoords newGrid PlayerBlack 1)
+          optiMoves = filter (worthMoveIA newGrid) moves
+       in if (null optiMoves)
+            then moves
+            else optiMoves
     miniMaxMap :: Integer -> [Coord] -> [Integer]
     miniMaxMap _ [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
@@ -465,28 +450,26 @@ miniMax grid player depth alpha beta whiteSco blackSco move
           if beta' <= alpha
             then []
             else xs
-
     outWhite = miniMaxMap alpha nxtMoveWhite
     outBlack = miniMaxMap2 beta nxtMoveBlack
-
 
 miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord
 miniWrapper grid player depth whiteSco blackSco
   | player == PlayerBlack = nxtMoveWhite !! whiteRet
   | otherwise = nxtMoveBlack !! blackRet
   where
-    nxtMoveWhite = let moves = validCoordToList (validIACoords grid PlayerWhite 1)
-                       optiMoves = filter (worthMoveIA grid) moves
-                   in if null optiMoves
-                      then moves
-                      else optiMoves
-
-    nxtMoveBlack = let moves = validCoordToList (validIACoords grid PlayerBlack 1)
-                       optiMoves = filter (worthMoveIA grid) moves
-                   in if null optiMoves
-                      then moves
-                      else optiMoves
-
+    nxtMoveWhite =
+      let moves = validCoordToList (validIACoords grid PlayerWhite 1)
+          optiMoves = filter (worthMoveIA grid) moves
+       in if null optiMoves
+            then moves
+            else optiMoves
+    nxtMoveBlack =
+      let moves = validCoordToList (validIACoords grid PlayerBlack 1)
+          optiMoves = filter (worthMoveIA grid) moves
+       in if null optiMoves
+            then moves
+            else optiMoves
     alpha = (8 * (toInteger (minBound :: Int)))
     beta = (8 * (toInteger (maxBound :: Int)))
     miniMaxMap :: Integer -> [Coord] -> [Integer]
@@ -509,7 +492,6 @@ miniWrapper grid player depth whiteSco blackSco
           if beta' <= alpha
             then []
             else xs
-
     outWhite = miniMaxMap alpha nxtMoveWhite
     outBlack = miniMaxMap2 beta nxtMoveBlack
     whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
