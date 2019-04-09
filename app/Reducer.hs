@@ -379,7 +379,7 @@ preScoring grid player move scoring = scoring5
         countDirection grid player (spacePos move (allDir !! idx)) 0 (allDir !! idx)
       | otherwise = 0
     addCaptureScoring :: ([Int], [Int]) -> Int -> ([Int], [Int])
-    addCaptureScoring ([f, g, h, i, j], [a, b, c, d, e]) nb = ([f, g, h, i, j], [a + nb, b, c, d, e])
+    addCaptureScoring (f, [a, b, c, d, e]) nb = (f, [a + nb, b, c, d, e])
     -- (0, 1), (1, 0), (1, 1), (-1, -1), (-1, 0), (0, -1), (-1, 1), (1, -1)
     dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
     -- countDirection grid player move count direction
@@ -446,7 +446,7 @@ miniMax grid player depth alpha beta whiteSco blackSco move
                       else optiMoves
 
     miniMaxMap :: Integer -> [Coord] -> [Integer]
-    miniMaxMap alph [] = []
+    miniMaxMap _ [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
       where
         execMini = miniMax newGrid PlayerWhite (depth - 1) alph beta newWhiteSco newBlackSco x
@@ -456,7 +456,7 @@ miniMax grid player depth alpha beta whiteSco blackSco move
             then []
             else xs
     miniMaxMap2 :: Integer -> [Coord] -> [Integer]
-    miniMaxMap2 bet [] = []
+    miniMaxMap2 _ [] = []
     miniMaxMap2 bet (x:xs) = execMini : miniMaxMap2 beta' newXs
       where
         execMini = miniMax newGrid PlayerBlack (depth - 1) alpha bet newWhiteSco newBlackSco x
@@ -490,7 +490,7 @@ miniWrapper grid player depth whiteSco blackSco
     alpha = (8 * (toInteger (minBound :: Int)))
     beta = (8 * (toInteger (maxBound :: Int)))
     miniMaxMap :: Integer -> [Coord] -> [Integer]
-    miniMaxMap alph [] = []
+    miniMaxMap _ [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
       where
         execMini = miniMax grid PlayerWhite depth alph beta whiteSco blackSco x
@@ -500,7 +500,7 @@ miniWrapper grid player depth whiteSco blackSco
             then []
             else xs
     miniMaxMap2 :: Integer -> [Coord] -> [Integer]
-    miniMaxMap2 bet [] = []
+    miniMaxMap2 _ [] = []
     miniMaxMap2 bet (x:xs) = execMini : miniMaxMap2 beta' newXs
       where
         execMini = miniMax grid PlayerBlack depth alpha bet whiteSco blackSco x
