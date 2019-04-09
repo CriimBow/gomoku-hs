@@ -3,15 +3,17 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.DeepSeq
 import Control.Lens.Combinators (imap)
+
 -- import Control.Parallel (par)
 -- import Data.List (elemIndex)
 -- import Data.List.Split (chunksOf)
 import Data.Maybe (isJust)
--- import Debug.Trace (trace, traceIO, traceShow)
+
+import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
+
 -- import System.IO
 -- import System.Random (Random(..), newStdGen)
-
 -- TYPES STATE
 data AppState
   = GameState { goGrid :: [[Cell]] -- go grid with piece
@@ -134,7 +136,10 @@ checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
 checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) allDir
   where
     genPosCheck (cx, cy) player (dx, dy) =
-      [(cx + dx, cy + dy, nextPlayer player), (cx + dx * 2, cy + dy * 2, nextPlayer player), (cx + dx * 3, cy + dy * 3, player)]
+      [ (cx + dx, cy + dy, nextPlayer player)
+      , (cx + dx * 2, cy + dy * 2, nextPlayer player)
+      , (cx + dx * 3, cy + dy * 3, player)
+      ]
     checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
     checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! y !! x == playerToPiece plr
 
@@ -247,7 +252,8 @@ distEmptyCellMap grille maxDist =
    in map (map not) $ foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
-    addDist1 grid = [[grid !! y !! x && not (checkNeighbour grid x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    addDist1 grid =
+      [[grid !! y !! x && not (checkNeighbour grid x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
     checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
     checkNeighbour grd x y =
       checkPos grd (x + 1) y ||
@@ -481,7 +487,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                    newAlpha = max a resNega
                 in newAlpha
       res =
-        if depth <= 0
+        if depth > 0
           then foldl abPruning alpha nxtMovesAndScore
           else maximum $ map (\(_, (s, _, _)) -> s) nxtMovesAndScore
    in res
@@ -500,11 +506,11 @@ miniWrapper grid player capWhite capBlack =
           then (a, co)
           else let newGrid = posePieceAndDelete (cx, cy) (nextPlayer player) grid
                    resNega = prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
-                   newAlpha = max a resNega
-                in (newAlpha, (cx, cy))
-      (_, bestMove) = foldl abPruning (alpha, (-1, -1)) nxtMovesAndScore
+                in if resNega > a
+                     then (resNega, (cx, cy))
+                     else (a, co)
+      (_, bestMove) = trace (show nxtMovesAndScore) (foldl abPruning (alpha, (-1, -1)) nxtMovesAndScore)
    in bestMove
-
 {-
 
 miniWrapper :: [[Cell]] -> Player -> Int -> Int -> Int -> Coord
