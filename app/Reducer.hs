@@ -482,7 +482,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       abPruning a ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then a
-          else let newGrid = posePieceAndDelete (cx, cy) (nextPlayer player) grid
+          else let newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega = prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
                    newAlpha = max a resNega
                 in newAlpha
@@ -504,7 +504,7 @@ miniWrapper grid player capWhite capBlack =
       abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then (a, co)
-          else let newGrid = posePieceAndDelete (cx, cy) (nextPlayer player) grid
+          else let newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega = prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
                 in if resNega > a
                      then (resNega, (cx, cy))
