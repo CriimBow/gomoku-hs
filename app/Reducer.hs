@@ -352,7 +352,8 @@ moveScoring grid capWhite capBlack player move =
         else (score, capWhite, nbCap)
   where
     countToScore count
-      | count <= 1 = 0
+      | count == 0 = 0
+      | count == 1 = 1
       | count == 2 = 10
       | count == 3 = 100
       | count == 4 = 1000
