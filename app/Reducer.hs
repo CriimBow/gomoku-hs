@@ -3,14 +3,14 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.DeepSeq
 import Control.Lens.Combinators (imap)
-import Control.Parallel (par)
-import Data.List (elemIndex)
-import Data.List.Split (chunksOf)
-import Data.Maybe (fromMaybe, isJust, isNothing)
-import Debug.Trace (trace, traceIO, traceShow)
+-- import Control.Parallel (par)
+-- import Data.List (elemIndex)
+-- import Data.List.Split (chunksOf)
+import Data.Maybe (isJust)
+-- import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
-import System.IO
-import System.Random (Random(..), newStdGen)
+-- import System.IO
+-- import System.Random (Random(..), newStdGen)
 
 -- TYPES STATE
 data AppState
@@ -64,7 +64,7 @@ initGameState mode =
             ]
             | j <- [1 .. hGoGrid]
             ]
-          _ -> [[EmptyCell | i <- [1 .. hGoGrid]] | j <- [1 .. hGoGrid]]
+          _ -> [[EmptyCell | _ <- [1 .. hGoGrid]] | _ <- [1 .. hGoGrid]]
     , gameMode = mode
     , playerTurn =
         case mode of
@@ -133,10 +133,10 @@ checkCaptur cr s =
 checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
 checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) allDir
   where
-    genPosCheck (cx, cy) p (dx, dy) =
-      [(cx + dx, cy + dy, nextPlayer p), (cx + dx * 2, cy + dy * 2, nextPlayer p), (cx + dx * 3, cy + dy * 3, p)]
-    checkPoss grd psCks = length (filter (checkPos grd) psCks) == 3
-    checkPos grd (x, y, p) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
+    genPosCheck (cx, cy) player (dx, dy) =
+      [(cx + dx, cy + dy, nextPlayer player), (cx + dx * 2, cy + dy * 2, nextPlayer player), (cx + dx * 3, cy + dy * 3, player)]
+    checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
+    checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! y !! x == playerToPiece plr
 
 supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
 supPosGrid = foldr supElGrd
@@ -155,9 +155,9 @@ supPosGrid = foldr supElGrd
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
   start <- getCPUTime
-  let mCoord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
-  end <- mCoord `deepseq` getCPUTime
-  let diff = fromIntegral (end - start) / (10 ^ 9)
+  let mCoord = solver (goGrid s) (playerTurn s) (nbPieceCapPWhite s) (nbPieceCapPBlack s)
+  endTimer <- mCoord `deepseq` getCPUTime
+  let diff = fromIntegral (endTimer - start) / (10 ^ 9)
   let withDiff = s {lastIATimeForPlay = diff}
   return (handelPlayCoord mCoord withDiff)
 
@@ -167,10 +167,10 @@ suggestionPlay s =
     then return s
     else do
       start <- getCPUTime
-      let coord = solver (goGrid s) (playerTurn s) (nbPieceCapPBlack s) (nbPieceCapPWhite s)
-      end <- coord `deepseq` getCPUTime
-      let diff = fromIntegral (end - start) / (10 ^ 9)
-      return s {lastIATimeForPlay = diff, cursorSuggestion = Just (coord)}
+      let coord = solver (goGrid s) (playerTurn s) (nbPieceCapPWhite s) (nbPieceCapPBlack s)
+      endTimer <- coord `deepseq` getCPUTime
+      let diff = fromIntegral (endTimer - start) / (10 ^ 9)
+      return s {lastIATimeForPlay = diff, cursorSuggestion = Just coord}
 
 -- UTIL
 playerToPiece :: Player -> Cell
@@ -200,7 +200,7 @@ checkEnd cr s
     s {end = Just Nothing}
   | otherwise = s
   where
-    checkAlign5 (cx, cy) grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
+    checkAlign5 _ grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
     maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
     genPosCheck :: Coord -> Coord -> [[Coord]]
     genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
@@ -224,30 +224,30 @@ delDoubleThree grd p grd_dist =
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
-    checkDoubleThree grd msk cr = checkAllPos grd $ allDir >>= genPosCheck msk cr
+    checkDoubleThree grille msk cr = checkAllPos grille $ allDir >>= genPosCheck msk cr
     genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
     genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
-    checkAllPos grd lpos =
-      let tmp = map snd $ filter (checkLPos grd) lpos
+    checkAllPos grida lpos =
+      let tmp = map snd $ filter (checkLPos grida) lpos
           dDir = foldr delDir [] tmp
        in 1 >= length dDir
     checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
-    checkLPos grd (lp, dir) = length lp == length (filter (checkPos grd) lp)
+    checkLPos grd' (lp, _) = length lp == length (filter (checkPos grd') lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
-    checkPos grd (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == pc
+    checkPos grid (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid !! y !! x == pc
     delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
     delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
 -- True if is dist <= maxDist
 distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
-distEmptyCellMap grd maxDist =
-  let initMap = map (map (== EmptyCell)) grd
+distEmptyCellMap grille maxDist =
+  let initMap = map (map (== EmptyCell)) grille
       iterator = [1 .. maxDist]
    in map (map not) $ foldr (\_ b -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
-    addDist1 grd = [[grd !! y !! x && not (checkNeighbour grd x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+    addDist1 grid = [[grid !! y !! x && not (checkNeighbour grid x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
     checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
     checkNeighbour grd x y =
       checkPos grd (x + 1) y ||
@@ -257,7 +257,7 @@ distEmptyCellMap grd maxDist =
       checkPos grd (x + 1) (y + 1) ||
       checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
     checkPos :: [[Bool]] -> Int -> Int -> Bool
-    checkPos grd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (grd !! y !! x)
+    checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd !! y !! x)
 
 -- /!\ no valide play if the map is Empty!
 validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
@@ -275,10 +275,7 @@ sumTuples tupA tupB = (fst tupA + fst tupB, snd tupA + snd tupB)
 -- SOLVER --
 ------------
 solver :: [[Cell]] -> Player -> Int -> Int -> Coord
-solver grd p nbCapBlack nbCapWihte =
-  let scoreBlack = ([0, 0, 0, 0, 0], [(div nbCapBlack 2), 0, 0, 0, 0])
-      scoreWhite = ([0, 0, 0, 0, 0], [(div nbCapWihte 2), 0, 0, 0, 0])
-   in miniWrapper grd p 3 scoreWhite scoreBlack
+solver grd p nbCapWihte nbCapBlack = miniWrapper grd p nbCapWihte nbCapBlack
 
 {-
 preScoring :: [[Cell]] -> Player -> Coord -> ([Int], [Int]) -> ([Int], [Int])
@@ -319,7 +316,6 @@ countDirection grid player move count direction
     playerPiece = playerToPiece player
     gridPiece = grid !! snd move !! fst move
 -}
-
 countDir :: [[Cell]] -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player (cx, cy) (dx, dy) =
   let (_, nb) = foldl sumDist (True, 0) [1 .. 4]
@@ -331,21 +327,23 @@ countDir grid player (cx, cy) (dx, dy) =
             then (True, nb + 1)
             else (False, nb)
 
-
-moveSoring :: [[Cell]] -> Int -> Int -> Player -> Coord -> Int
-moveSoring grid capWhite capBlack player move =
+moveScoring :: [[Cell]] -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+moveScoring grid capWhite capBlack player move =
   let countedDir = map (countDir grid player move) allDir
       sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
       newCap = 2 * length (checkCapturToSup player move grid)
-      nbCap = if player == PlayerWhite
-              then capWhite + newCap
-              else capBlack + newCap
-
-      scoreCapture = if nbCap == 10
-                     then 1000000
-                     else 10000 * nbCap
+      nbCap =
+        if player == PlayerWhite
+          then capWhite + newCap
+          else capBlack + newCap
+      scoreCapture =
+        if nbCap == 10
+          then 1000000
+          else 10000 * nbCap
       score = scoreCapture + foldl transformToScore 0 sumSameDir
-   in score
+   in if player == PlayerWhite
+        then (score, nbCap, capBlack)
+        else (score, capWhite, nbCap)
   where
     countToScore count
       | count <= 1 = 0
@@ -359,7 +357,7 @@ moveSoring grid capWhite capBlack player move =
 --- if int < 0
 moreThanOne :: [[Cell]] -> Coord -> Int -> (Int, Int) -> Int
 moreThanOne grid move count direction
-  | (count > 1) = 2
+  | count > 1 = 2
   | 0 > fst move || 0 > snd move = count
   | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
   | EmptyCell == gridPiece = count
@@ -367,15 +365,16 @@ moreThanOne grid move count direction
   where
     gridPiece = grid !! snd move !! fst move
 
-
 worthMoveIA :: [[Cell]] -> Coord -> Bool
 worthMoveIA grid move = True `elem` render
   where
     dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
     removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
-    removeCoordIA grid move direction = moreThanOne grid (sumTuples move direction) 0 direction
+    removeCoordIA grd mv direction = moreThanOne grd (sumTuples mv direction) 0 direction
     sumDir = map (removeCoordIA grid move) allDir
     render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
+
+{-
 
 scoringCalc :: ([Int], [Int]) -> Integer
 scoringCalc scoring =
@@ -399,52 +398,52 @@ scoringCalc scoring =
 --- diffScore blanc - noir
 --- blanc => maximiser la différence => tendre vers +infini
 --- noir => minimiser la différence => tendre vers - infini
-miniMax :: [[Cell]] -> Player -> Int -> Integer -> Integer -> ([Int], [Int]) -> ([Int], [Int]) -> Coord -> Integer
-miniMax grid player depth alpha beta whiteSco blackSco move
+miniMax :: [[Cell]] -> Player -> Int -> Int -> Int -> Int -> Int -> Int
+miniMax grid player depth alpha beta capWhite capBlack
   | depth == 0 = diffScore
   | player == PlayerWhite && (length nxtMoveWhite) == 0 = diffScore
   | player == PlayerBlack && (length nxtMoveBlack) == 0 = diffScore
   | player == PlayerWhite = minimum outBlack
   | otherwise = maximum outWhite
   where
-    newGrid' = posePiece move player grid
-    newWhiteSco =
+    newCapWhite =
       if player == PlayerWhite
-        then preScoring newGrid' PlayerWhite move whiteSco
-        else whiteSco
-    newBlackSco =
+        then capWhite + 2 * length (checkCapturToSup player move grid)
+        else capWhite
+    newCapBlack =
       if player == PlayerBlack
-        then preScoring newGrid' PlayerBlack move blackSco
-        else blackSco
-    newGrid = posePieceAndDelete move player grid
+        then capBlack + 2 * length (checkCapturToSup player move grid)
+        else capBlack
     diffScore = (scoringCalc newWhiteSco) - (scoringCalc newBlackSco)
     nxtMoveWhite =
       let moves = validCoordToList (validIACoords newGrid PlayerWhite 1)
           optiMoves = filter (worthMoveIA newGrid) moves
-       in if (null optiMoves)
+       in if null optiMoves
             then moves
             else optiMoves
     nxtMoveBlack =
       let moves = validCoordToList (validIACoords newGrid PlayerBlack 1)
           optiMoves = filter (worthMoveIA newGrid) moves
-       in if (null optiMoves)
+       in if null optiMoves
             then moves
             else optiMoves
-    miniMaxMap :: Integer -> [Coord] -> [Integer]
+    --- newGrid = posePieceAndDelete move player grid
+    miniMaxMap :: Int -> [Coord] -> [Int]
     miniMaxMap _ [] = []
-    miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
+    miniMaxMap alph ((cx, cy):xs) = execMini : miniMaxMap alpha' newXs
       where
-        execMini = miniMax newGrid PlayerWhite (depth - 1) alph beta newWhiteSco newBlackSco x
+        execMini =
+          miniMax (posePieceAndDelete (cx, cy) player grid) PlayerWhite (depth - 1) alph beta newCapWhite newCapBlack x
         alpha' = max alph execMini
         newXs =
           if beta <= alpha'
             then []
             else xs
-    miniMaxMap2 :: Integer -> [Coord] -> [Integer]
+    miniMaxMap2 :: Int -> [Coord] -> [Int]
     miniMaxMap2 _ [] = []
     miniMaxMap2 bet (x:xs) = execMini : miniMaxMap2 beta' newXs
       where
-        execMini = miniMax newGrid PlayerBlack (depth - 1) alpha bet newWhiteSco newBlackSco x
+        execMini = miniMax newGrid PlayerBlack (depth - 1) alpha bet newCapWhite newCapBlack x
         beta' = min bet execMini
         newXs =
           if beta' <= alpha
@@ -452,9 +451,64 @@ miniMax grid player depth alpha beta whiteSco blackSco move
             else xs
     outWhite = miniMaxMap alpha nxtMoveWhite
     outBlack = miniMaxMap2 beta nxtMoveBlack
+    {-
+    moveSoring :: [[Cell]] -> Int -> Int -> Player -> Coord -> Int
+    moveSoring grid capWhite capBlack player move
+    -}
+    --- newGrid = posePieceAndDelete move player grid
+-}
+nextMoves :: [[Cell]] -> Player -> [Coord]
+nextMoves grid player =
+  let moves = validCoordToList $ validIACoords grid player 1
+      optiMoves = filter (worthMoveIA grid) moves
+   in if null optiMoves
+        then if null moves
+               then validCoordToList $ validCoords grid player
+               else moves
+        else optiMoves
 
-miniWrapper :: [[Cell]] -> Player -> Int -> ([Int], [Int]) -> ([Int], [Int]) -> Coord
-miniWrapper grid player depth whiteSco blackSco
+negaMax :: [[Cell]] -> Player -> Int -> Int -> Int -> Int -> Int -> Int
+negaMax grid player depth alpha beta capWhite capBlack =
+  let moves = nextMoves grid player
+      nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
+    -- sort
+      abPruning a ((cx, cy), (prSc, nW, nB)) =
+        if a >= beta
+          then a
+          else let newGrid = posePieceAndDelete (cx, cy) (nextPlayer player) grid
+                   resNega = prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
+                   newAlpha = max a resNega
+                in newAlpha
+      res =
+        if depth <= 0
+          then foldl abPruning alpha nxtMovesAndScore
+          else maximum $ map (\(_, (s, _, _)) -> s) nxtMovesAndScore
+   in res
+
+miniWrapper :: [[Cell]] -> Player -> Int -> Int -> Coord
+miniWrapper grid player capWhite capBlack =
+  let depth = 2 -- In reality depth = depth + 2
+      moves = nextMoves grid player
+      nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
+      alpha = div (minBound :: Int) 8
+      beta = div (maxBound :: Int) 8
+    -- sort
+      abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
+        if a >= beta
+          then (a, co)
+          else let newGrid = posePieceAndDelete (cx, cy) (nextPlayer player) grid
+                   resNega = prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
+                   newAlpha = max a resNega
+                in (newAlpha, (cx, cy))
+      (_, bestMove) = foldl abPruning (alpha, (-1, -1)) nxtMovesAndScore
+   in bestMove
+
+{-
+
+miniWrapper :: [[Cell]] -> Player -> Int -> Int -> Int -> Coord
+miniWrapper grid player depth capWhite capBlack
   | player == PlayerBlack = nxtMoveWhite !! whiteRet
   | otherwise = nxtMoveBlack !! blackRet
   where
@@ -470,23 +524,23 @@ miniWrapper grid player depth whiteSco blackSco
        in if null optiMoves
             then moves
             else optiMoves
-    alpha = (8 * (toInteger (minBound :: Int)))
-    beta = (8 * (toInteger (maxBound :: Int)))
-    miniMaxMap :: Integer -> [Coord] -> [Integer]
+    alpha = minBound :: Int
+    beta = maxBound :: Int
+    miniMaxMap :: Int -> [Coord] -> [Int]
     miniMaxMap _ [] = []
     miniMaxMap alph (x:xs) = execMini : miniMaxMap alpha' newXs
       where
-        execMini = miniMax grid PlayerWhite depth alph beta whiteSco blackSco x
+        execMini = miniMax grid PlayerWhite depth alph beta capWhite capBlack x
         alpha' = max alph execMini
         newXs =
           if beta <= alpha'
             then []
             else xs
-    miniMaxMap2 :: Integer -> [Coord] -> [Integer]
+    miniMaxMap2 :: Int -> [Coord] -> [Int]
     miniMaxMap2 _ [] = []
     miniMaxMap2 bet (x:xs) = execMini : miniMaxMap2 beta' newXs
       where
-        execMini = miniMax grid PlayerBlack depth alpha bet whiteSco blackSco x
+        execMini = miniMax grid PlayerBlack depth alpha bet capWhite capBlack x
         beta' = min bet execMini
         newXs =
           if beta' <= alpha
@@ -496,3 +550,4 @@ miniWrapper grid player depth whiteSco blackSco
     outBlack = miniMaxMap2 beta nxtMoveBlack
     whiteRet = fromMaybe 0 (elemIndex (maximum outWhite) outWhite)
     blackRet = fromMaybe 0 (elemIndex (minimum outBlack) outBlack)
+-}
