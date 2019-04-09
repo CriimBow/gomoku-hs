@@ -477,13 +477,13 @@ miniWrapper grid player depth whiteSco blackSco
   where
     nxtMoveWhite = let moves = validCoordToList (validIACoords grid PlayerWhite 1)
                        optiMoves = filter (worthMoveIA grid) moves
-                   in if (null optiMoves)
+                   in if null optiMoves
                       then moves
                       else optiMoves
 
     nxtMoveBlack = let moves = validCoordToList (validIACoords grid PlayerBlack 1)
                        optiMoves = filter (worthMoveIA grid) moves
-                   in if (null optiMoves)
+                   in if null optiMoves
                       then moves
                       else optiMoves
 

@@ -43,10 +43,12 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   case g of
     R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn, R.cursor = cr, R.goGrid = grd} ->
-      let nextG = R.handelPlayCoord cr (g {R.cursorSuggestion = Nothing})
-       in case gmdMd of
-            R.GameMulti -> continue nextG
-            R.GameSolo _ -> liftIO (R.handelIAPlay nextG) >>= continue
+      if not $ R.validCoord (R.goGrid g) (R.playerTurn g) cr
+        then continue g
+        else let nextG = R.handelPlayCoord cr (g {R.cursorSuggestion = Nothing})
+              in case gmdMd of
+                   R.GameMulti -> continue nextG
+                   R.GameSolo _ -> liftIO (R.handelIAPlay nextG) >>= continue
     R.Home mode ->
       case mode of
         R.GameSolo _ -> continue $ R.SoloSelectPlayer R.PlayerWhite
