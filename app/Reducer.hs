@@ -371,8 +371,8 @@ preScoring grid player move scoring = scoring5
   where
     spacePos :: (Int, Int) -> (Int, Int) -> (Int, Int)
     spacePos tupA tupB = (fst tupA + 2 * (fst tupB), snd tupA + 2 * (snd tupB))
-    countSpace :: [[Cell]] -> [(Int, Int)] -> (Int, Int) -> Int -> Int
-    countSpace grid allDir move idx
+    countSpace :: [[Cell]] -> (Int, Int) -> Int -> Int
+    countSpace grid move idx
       | (fst move + fst (allDir !! idx)) < 0 || (snd move + snd (allDir !! idx)) < 0 = 0
       | (fst move + fst (allDir !! idx)) > (hGoGrid - 1) || (snd move + snd (allDir !! idx)) > (hGoGrid - 1) = 0
       | grid !! (snd move + snd (allDir !! idx)) !! (fst move + fst (allDir !! idx)) == EmptyCell =
@@ -384,7 +384,7 @@ preScoring grid player move scoring = scoring5
     dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
     -- countDirection grid player move count direction
     countedDir = map (countDirection grid player move 0) allDir
-    spaceCount = map (countSpace grid allDir move) [0 .. 7]
+    spaceCount = map (countSpace grid move) [0 .. 7]
     -- preScoringOneDirection countedDir dir space0 space5 exScoring
     scoringPos1 = preScoringOneDirection countedDir (dirCouples !! 0) (spaceCount !! 0) (spaceCount !! 5) scoring
     scoringPos2 = preScoringOneDirection countedDir (dirCouples !! 1) (spaceCount !! 1) (spaceCount !! 4) scoringPos1
