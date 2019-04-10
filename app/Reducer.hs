@@ -51,7 +51,9 @@ data GameMode
 
 type Coord = (Int, Int)
 
-type Grid = Vector Char
+type Grid = Vec.Vector Char -- length 19 * 19
+
+type GridBool = Vec.Vector Bool -- length 19 * 19
 
 -- INIT STATE
 initState :: AppState
@@ -78,12 +80,12 @@ initGameState mode =
       , end = Nothing
       , nbPieceCapPBlack = 0
       , nbPieceCapPWhite = 0
-        }
+      }
   where
     putFirstPiece :: Int -> Char -> Char
     putFirstPiece idx _
-    | idx == hGoGrid * 8 + 8 = cellToChar PieceWhite
-    | otherwise = cellToChar EmptyCell
+        | idx == hGoGrid * 8 + 8 = cellToChar PieceWhite
+        | otherwise = cellToChar EmptyCell
 
 -- UPDATE STATE
 data CursorDir
@@ -160,19 +162,14 @@ checkCapturToSup p (cx, cy) grd =
     checkPoss grid psCks = Vec.length (Vec.filter (checkPos grid) psCks) == 3
     checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! (hGoGrid * y + x) == playerToPieceVec plr
 
-supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
-supPosGrid = foldl' supElGrd
+supPosGrid :: GridBool -> [[(Int, Int, Player)]] -> GridBool
+supPosGrid grd toSup = foldl' supElGrd grd toSup
   where
+    supElGrd :: GridBool -> [(Int, Int, Player)] -> GridBool
     supElGrd grd poss =
       let (fx, fy, _) = head poss
           (sx, sy, _) = poss !! 1
-       in [ [ if (x == fx && y == fy) || (x == sx && y == sy)
-            then EmptyCell
-            else grd !! y !! x
-          | x <- [0 .. hGoGrid - 1]
-          ]
-          | y <- [0 .. hGoGrid - 1]
-          ]
+       in Vec.imap (\i e -> if i == (fy * hGoGrid + fx) || i == (sy * hGoGrid + sx) then cellToChar EmptyCell else e) grd
 
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
@@ -218,14 +215,14 @@ charToCell '1' = PieceWhite
 charToCell '2' = PieceBlack
 
 -- can use delDoubleThree
-validCoords :: [[Cell]] -> Player -> [[Bool]]
-validCoords grd p = delDoubleThree grd p (map (map (== EmptyCell)) grd)
+validCoords :: Grid -> Player -> GridBool
+validCoords grd p = delDoubleThree grd p (Vec.map (== cellToChar EmptyCell) grd)
 
-validCoord :: [[Cell]] -> Player -> Coord -> Bool
-validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy !! cx
+validCoord :: Grid -> Player -> Coord -> Bool
+validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy * hGoGrid + cx
 
-validCoordToList :: [[Bool]] -> [(Int, Int)]
-validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y !! x]
+validCoordToList :: GridBool -> [(Int, Int)]
+validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y * hGoGrid + x]
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
