@@ -372,7 +372,7 @@ nextMoves :: [[Cell]] -> Player -> [Coord]
 nextMoves grid player =
   let moves = validCoordToList $ validIACoords grid player 1
       optiMoves = filter (worthMoveIA grid) moves
-   in if null optiMoves
+   in if length optiMoves < 4
         then if null moves
                then validCoordToList $ validCoords grid player
                else moves
