@@ -51,6 +51,7 @@ executables:
       - deepseq
       - split
       - parallel
+      - vector
 
 tests:
   gomoku-test:
