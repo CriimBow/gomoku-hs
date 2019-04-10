@@ -10,7 +10,6 @@ import Control.Lens.Combinators (imap)
 import Data.Maybe (isJust)
 
 import Data.List (foldl', sortBy)
-import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
 
 -- import System.IO
@@ -427,7 +426,7 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = trace (show movesSort) (foldl' abPruning (alpha, (-1, -1)) movesSort)
+      (_, bestMove) = foldl' abPruning (alpha, (-1, -1)) movesSort
    in bestMove
   where
     compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
