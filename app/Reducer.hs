@@ -345,7 +345,7 @@ moveScoring grid capWhite capBlack player move =
       | count == 2 = 10
       | count == 3 = 100
       | count == 4 = 1000
-      | otherwise = 100000
+      | otherwise = 1000000
     transformToScore :: Int -> Int -> Int
     transformToScore precSco count = precSco + countToScore count
 
@@ -389,7 +389,10 @@ negaMax grid player depth alpha beta capWhite capBlack =
         if a >= beta
           then a
           else let newGrid = posePieceAndDelete (cx, cy) player grid
-                   resNega = prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
+                   resNega =
+                     if prSc < 500000
+                       then prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
+                       else prSc
                    newAlpha = max a resNega
                 in newAlpha
       res =
@@ -417,7 +420,10 @@ miniWrapper grid player capWhite capBlack =
         if a >= beta
           then (a, co)
           else let newGrid = posePieceAndDelete (cx, cy) player grid
-                   resNega = prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
+                   resNega =
+                     if prSc < 500000
+                       then prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
+                       else prSc
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
