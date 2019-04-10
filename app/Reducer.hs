@@ -11,6 +11,7 @@ import Data.Maybe (isJust)
 
 import Debug.Trace (trace, traceIO, traceShow)
 import System.CPUTime
+import Data.List (foldl')
 
 -- import System.IO
 -- import System.Random (Random(..), newStdGen)
@@ -144,9 +145,9 @@ checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) allD
     checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! y !! x == playerToPiece plr
 
 supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
-supPosGrid = foldr supElGrd
+supPosGrid gd = foldl' supElGrd gd
   where
-    supElGrd poss grd =
+    supElGrd grd poss =
       let (fx, fy, _) = head poss
           (sx, sy, _) = poss !! 1
        in [ [ if (x == fx && y == fy) || (x == sx && y == sy)
@@ -235,21 +236,21 @@ delDoubleThree grd p grd_dist =
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grida lpos =
       let tmp = map snd $ filter (checkLPos grida) lpos
-          dDir = foldr delDir [] tmp
+          dDir = foldl' delDir [] tmp
        in 1 >= length dDir
     checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
     checkLPos grd' (lp, _) = length lp == length (filter (checkPos grd') lp)
     checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
     checkPos grid (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid !! y !! x == pc
-    delDir :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
-    delDir (drx, dry) acc = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
+    delDir :: [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
+    delDir acc (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
 -- True if is dist <= maxDist
 distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
 distEmptyCellMap grille maxDist =
   let initMap = map (map (== EmptyCell)) grille
       iterator = [1 .. maxDist]
-   in map (map not) $ foldr (\_ b -> addDist1 b) initMap iterator
+   in map (map not) $ foldl' (\b _ -> addDist1 b) initMap iterator
   where
     addDist1 :: [[Bool]] -> [[Bool]]
     addDist1 grid =
@@ -324,7 +325,7 @@ countDirection grid player move count direction
 -}
 countDir :: [[Cell]] -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player (cx, cy) (dx, dy) =
-  let (_, nb) = foldl sumDist (True, 0) [1 .. 4]
+  let (_, nb) = foldl' sumDist (True, 0) [1 .. 4]
    in nb
   where
     sumDist (b, nb) d =
@@ -346,7 +347,7 @@ moveScoring grid capWhite capBlack player move =
         if nbCap == 10
           then 1000000
           else 10000 * nbCap
-      score = scoreCapture + foldl transformToScore 0 sumSameDir
+      score = scoreCapture + foldl' transformToScore 0 sumSameDir
    in if player == PlayerWhite
         then (score, nbCap, capBlack)
         else (score, capWhite, nbCap)
@@ -489,7 +490,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl abPruning alpha nxtMovesAndScore
+          then foldl' abPruning alpha nxtMovesAndScore
           else maximum $ map (\(_, (s, _, _)) -> s) nxtMovesAndScore
    in res
 
@@ -510,7 +511,7 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = trace (show nxtMovesAndScore) (foldl abPruning (alpha, (-1, -1)) nxtMovesAndScore)
+      (_, bestMove) = trace (show nxtMovesAndScore) (foldl' abPruning (alpha, (-1, -1)) nxtMovesAndScore)
    in bestMove
 {-
 
