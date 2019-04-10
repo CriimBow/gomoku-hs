@@ -133,19 +133,32 @@ checkCaptur cr s =
         PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = nbPieceCapPBlack s + nbCap}
         PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
 
-checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
-checkCapturToSup p cr grd = filter (checkPoss grd) $ map (genPosCheck cr p) allDir
+mapMemoCapturToSup :: ([[[[(Int, Int, Player)]]]], [[[[(Int, Int, Player)]]]])
+mapMemoCapturToSup =
+  let mw = [[map (genPosCheck (x, y) PlayerWhite) allDir | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      mb = [[map (genPosCheck (x, y) PlayerBlack) allDir | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+   in (mw, mb)
   where
     genPosCheck (cx, cy) player (dx, dy) =
       [ (cx + dx, cy + dy, nextPlayer player)
       , (cx + dx * 2, cy + dy * 2, nextPlayer player)
       , (cx + dx * 3, cy + dy * 3, player)
       ]
+
+checkCapturToSup :: Player -> Coord -> [[Cell]] -> [[(Int, Int, Player)]]
+checkCapturToSup p (cx, cy) grd =
+  let (mw, mn) = mapMemoCapturToSup
+      toCheck =
+        if p == PlayerWhite
+          then mw
+          else mn
+   in filter (checkPoss grd) $ toCheck !! cy !! cx
+  where
     checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
     checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! y !! x == playerToPiece plr
 
 supPosGrid :: [[Cell]] -> [[(Int, Int, Player)]] -> [[Cell]]
-supPosGrid gd = foldl' supElGrd gd
+supPosGrid = foldl' supElGrd
   where
     supElGrd grd poss =
       let (fx, fy, _) = head poss
@@ -218,8 +231,8 @@ checkEnd cr s
 ------------
 -- SOLVER --
 ------------
-mapMemo :: ([[[([(Int, Int, Cell)], (Int, Int))]]], [[[([(Int, Int, Cell)], (Int, Int))]]])
-mapMemo =
+mapMemoDoubleThree :: ([[[([(Int, Int, Cell)], (Int, Int))]]], [[[([(Int, Int, Cell)], (Int, Int))]]])
+mapMemoDoubleThree =
   let maskWhite = maskCoef $ playerToPiece PlayerWhite
       maskBlack = maskCoef $ playerToPiece PlayerBlack
       genWhite = [[allDir >>= genPosCheck maskWhite (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
@@ -239,7 +252,7 @@ mapMemo =
 
 delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
 delDoubleThree grd p grd_dist =
-  let (mw, mn) = mapMemo
+  let (mw, mn) = mapMemoDoubleThree
       toCheck =
         if p == PlayerWhite
           then mw
