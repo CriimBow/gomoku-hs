@@ -28,7 +28,9 @@ import Brick.Types (Padding(..))
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
+import Constant (hGoGrid)
 import Data.Maybe (isNothing)
+import qualified Data.Vector.Unboxed as Vec
 import qualified Graphics.Vty as V
 import qualified Reducer as R
 import Text.Printf (printf)
@@ -92,26 +94,28 @@ drawGame R.GameState { R.goGrid = grd
                 R.PlayerBlack -> [str "Player Black Win !"]
     -- BOARD
     wGoBoard :: Widget Name
-    wGoBoard = vBox $ [hBox $ map str boarderY] ++ imap cellsInRow grd ++ [hBox $ map str boarderY]
+    wGoBoard = vBox $ [hBox $ map str boarderY] ++ map (cellsInRow grd) [0 .. hGoGrid - 1] ++ [hBox $ map str boarderY]
     boarderY = ["   "] ++ map (printf " %.2d") [0 .. 18 :: Int] ++ [" "]
-    cellsInRow y r = hBox $ [str $ printf "%.2d " y] ++ imap (drawCell y) r ++ [str $ printf " %.2d" y]
-    drawCell :: Int -> Int -> R.Cell -> Widget Name
-    drawCell y x cell =
+    cellsInRow :: R.Grid -> Int -> Widget Name
+    cellsInRow gd y =
+      hBox $ [str $ printf "%.2d " y] ++ map (drawCell gd y) [0 .. hGoGrid - 1] ++ [str $ printf " %.2d" y]
+    drawCell :: R.Grid -> Int -> Int -> Widget Name
+    drawCell gr y x =
       if crv && isNothing end
         then if cx == x && cy == y
                then if not (R.validCoord grd plTurn (cx, cy))
                       then withAttr cursorBadAttr cw
                       else case R.playerToPiece plTurn of
                              R.PieceWhite -> withAttr pieceWhiteAttr cw
-                             R.PieceBlack -> withAttr pieceBlackAttr cw
+                             _ -> withAttr pieceBlackAttr cw
                else case sugCrd of
                       Just (csx, csy) ->
                         if csx == x && csy == y
                           then withAttr suggestionAttr cw
-                          else pieceToWiget cell
-                      Nothing -> pieceToWiget cell
-        else pieceToWiget cell
-    pieceToWiget p =
+                          else cellToWiget $ R.charToCell $ gr Vec.! (y * hGoGrid + x)
+                      Nothing -> cellToWiget $ R.charToCell $ gr Vec.! (y * hGoGrid + x)
+        else cellToWiget $ R.charToCell $ gr Vec.! (y * hGoGrid + x)
+    cellToWiget p =
       case p of
         R.PieceWhite -> withAttr pieceWhiteAttr $ str "(#)" -- "⚪  "
         R.PieceBlack -> withAttr pieceBlackAttr $ str "(#)" -- "⚫  "

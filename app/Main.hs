@@ -27,7 +27,7 @@ app =
 main :: IO ()
 main = do
   chan <- newBChan 10
-  forkIO $
+  _ <- forkIO $
     forever $ do
       writeBChan chan E.Tick
       threadDelay 300000 -- cursor alternator speed
