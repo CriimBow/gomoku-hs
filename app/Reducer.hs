@@ -233,14 +233,18 @@ checkEnd cr s
     s {end = Just Nothing}
   | otherwise = s
   where
-    checkAlign5 _ grd p = checkAllPos grd p $ allDir >>= genPosCheck cr
+    checkAlign5 :: Coord -> Grid -> Player -> Bool
+    checkAlign5 c grd p = checkAllPos grd p $ allDir >>= genPosCheck c
+    maskCoef :: [[Int]]
     maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
     genPosCheck :: Coord -> Coord -> [[Coord]]
     genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
+    checkAllPos :: Grid -> Player -> [[Coord]]
     checkAllPos grd p lpos =
       let tmp = map (length . filter (checkPos grd p)) lpos
        in (0 /= length (filter (== 5) tmp))
-    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y !! x == playerToPiece p
+    checkPos :: Grid -> Player -> Coord -> Bool
+    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y * hGoGrid + x == playerToPiece p
 
 ------------
 -- SOLVER --
@@ -264,16 +268,16 @@ mapMemoDoubleThree =
     genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
     genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
 
-delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
-delDoubleThree grd p grd_dist =
+delDoubleThree :: Grid -> Player -> GridBool -> GridBool
+delDoubleThree grd p grd_old =
   let (mw, mn) = mapMemoDoubleThree
       toCheck =
         if p == PlayerWhite
           then mw
           else mn
-   in [[grd_dist !! y !! x && checkAllPos grd (toCheck !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+   in Vec.imap (\i e -> grd_old !! i && checkAllPos grd (toCheck !! (i / hGoGrid) !! (i % hGoGrid))) grd_old
   where
-    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
+    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool -- TODO
     checkAllPos grida lpos =
       let tmp = map snd $ filter (checkLPos grida) lpos
           dDir = foldl' delDir [] tmp
