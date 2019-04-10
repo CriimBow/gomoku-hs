@@ -218,11 +218,15 @@ checkEnd cr s
 ------------
 -- SOLVER --
 ------------
-delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
-delDoubleThree grd p grd_dist =
-  let msk = (maskCoef $ playerToPiece p)
-   in [[grd_dist !! y !! x && checkDoubleThree grd msk (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+mapMemo :: ([[[([(Int, Int, Cell)], (Int, Int))]]], [[[([(Int, Int, Cell)], (Int, Int))]]])
+mapMemo =
+  let maskWhite = maskCoef $ playerToPiece PlayerWhite
+      maskBlack = maskCoef $ playerToPiece PlayerBlack
+      genWhite = [[allDir >>= genPosCheck maskWhite (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      genBlack = [[allDir >>= genPosCheck maskBlack (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+   in (genWhite, genBlack)
   where
+    maskCoef :: Cell -> [[(Int, Cell)]]
     maskCoef pc =
       [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
@@ -230,9 +234,18 @@ delDoubleThree grd p grd_dist =
       , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
       , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
       ]
-    checkDoubleThree grille msk cr = checkAllPos grille $ allDir >>= genPosCheck msk cr
     genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
     genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
+
+delDoubleThree :: [[Cell]] -> Player -> [[Bool]] -> [[Bool]]
+delDoubleThree grd p grd_dist =
+  let (mw, mn) = mapMemo
+      toCheck =
+        if p == PlayerWhite
+          then mw
+          else mn
+   in [[grd_dist !! y !! x && checkAllPos grd (toCheck !! y !! x) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+  where
     checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grida lpos =
       let tmp = map snd $ filter (checkLPos grida) lpos
@@ -359,7 +372,6 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-    -- sort
       abPruning a ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then a
@@ -388,7 +400,6 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-    -- sort
       abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then (a, co)
