@@ -101,7 +101,7 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorDown -> (x, (y + 1) `mod` hGoGrid)
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
-moveCursor g _ = g
+moveCursor _ _ = (0, 0)
 
 handelPlayCoord :: Coord -> AppState -> AppState
 handelPlayCoord cr s =
@@ -119,7 +119,7 @@ posePiece (cx, cy) p grid = Vec.imap putPiece grid
     putPiece :: Int -> Char -> Char
     putPiece idx c =
       if idx == hGoGrid * cy + cx
-        then playerToPieceVec p
+        then playerToChar p
         else c
 
 posePieceAndDelete :: Coord -> Player -> Grid -> Grid
@@ -167,13 +167,13 @@ checkCapturToSup p (cx, cy) grd =
     checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
     checkPos :: Grid -> (Int, Int, Player) -> Bool
     checkPos gd (x, y, plr) =
-      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd Vec.! (hGoGrid * y + x) == playerToPieceVec plr
+      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd Vec.! (hGoGrid * y + x) == playerToChar plr
 
 supPosGrid :: Grid -> [[(Int, Int, Player)]] -> Grid
 supPosGrid grd toSup = foldl' supElGrd grd toSup
   where
-    supElGrd :: GridBool -> [(Int, Int, Player)] -> GridBool
-    supElGrd grd poss =
+    supElGrd :: Grid -> [(Int, Int, Player)] -> Grid
+    supElGrd gd poss =
       let (fx, fy, _) = head poss
           (sx, sy, _) = poss !! 1
        in Vec.imap
@@ -181,7 +181,7 @@ supPosGrid grd toSup = foldl' supElGrd grd toSup
                if i == (fy * hGoGrid + fx) || i == (sy * hGoGrid + sx)
                  then cellToChar EmptyCell
                  else e)
-            grd
+            gd
 
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
@@ -212,9 +212,9 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-playerToPieceVec :: Player -> Char
-playerToPieceVec PlayerWhite = '1'
-playerToPieceVec PlayerBlack = '2'
+playerToChar :: Player -> Char
+playerToChar PlayerWhite = '1'
+playerToChar PlayerBlack = '2'
 
 cellToChar :: Cell -> Char
 cellToChar EmptyCell = '0'
@@ -232,18 +232,18 @@ validCoords :: Grid -> Player -> GridBool
 validCoords grd p = delDoubleThree grd p (Vec.map (== cellToChar EmptyCell) grd)
 
 validCoord :: Grid -> Player -> Coord -> Bool
-validCoord grd p (cx, cy) = cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p !! cy * hGoGrid + cx
+validCoord grd p (cx, cy) =
+  cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p Vec.! (cy * hGoGrid + cx)
 
 validCoordToList :: GridBool -> [(Int, Int)]
-validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid !! y * hGoGrid + x]
+validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid Vec.! (y * hGoGrid + x)]
 
 checkEnd :: Coord -> AppState -> AppState
 checkEnd cr s
   | nbPieceCapPWhite s >= 10 = s {end = Just (Just PlayerWhite)}
   | nbPieceCapPBlack s >= 10 = s {end = Just (Just PlayerBlack)}
   | checkAlign5 cr (goGrid s) (playerTurn s) = s {end = Just (Just (playerTurn s))}
-  | hGoGrid == length (filter (\r -> 0 == length (filter id r)) $ validCoords (goGrid s) (playerTurn s)) =
-    s {end = Just Nothing}
+  | 0 == Vec.length (Vec.filter id $ validCoords (goGrid s) (playerTurn s)) = s {end = Just Nothing}
   | otherwise = s
   where
     checkAlign5 :: Coord -> Grid -> Player -> Bool
@@ -252,16 +252,18 @@ checkEnd cr s
     maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
     genPosCheck :: Coord -> Coord -> [[Coord]]
     genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
-    checkAllPos :: Grid -> Player -> [[Coord]]
+    checkAllPos :: Grid -> Player -> [[Coord]] -> Bool
     checkAllPos grd p lpos =
       let tmp = map (length . filter (checkPos grd p)) lpos
        in (0 /= length (filter (== 5) tmp))
     checkPos :: Grid -> Player -> Coord -> Bool
-    checkPos grd p (x, y) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd !! y * hGoGrid + x == playerToPiece p
+    checkPos grd p (x, y) =
+      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grd Vec.! (y * hGoGrid + x) == playerToChar p
 
 ------------
 -- SOLVER --
 ------------
+-- OPTI ?
 mapMemoDoubleThree :: ([[[([(Int, Int, Cell)], (Int, Int))]]], [[[([(Int, Int, Cell)], (Int, Int))]]])
 mapMemoDoubleThree =
   let maskWhite = maskCoef $ playerToPiece PlayerWhite
@@ -288,31 +290,31 @@ delDoubleThree grd p grd_old =
         if p == PlayerWhite
           then mw
           else mn
-   in Vec.imap (\i e -> grd_old !! i && checkAllPos grd (toCheck !! (i / hGoGrid) !! (i % hGoGrid))) grd_old
+   in Vec.imap (\i e -> e && checkAllPos grd (toCheck !! div i hGoGrid !! mod i hGoGrid)) grd_old
   where
-    checkAllPos :: [[Cell]] -> [([(Int, Int, Cell)], (Int, Int))] -> Bool -- TODO
+    checkAllPos :: Grid -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grida lpos =
       let tmp = map snd $ filter (checkLPos grida) lpos
           dDir = foldl' delDir [] tmp
        in 1 >= length dDir
-    checkLPos :: [[Cell]] -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
+    checkLPos :: Grid -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
     checkLPos grd' (lp, _) = length lp == length (filter (checkPos grd') lp)
-    checkPos :: [[Cell]] -> (Int, Int, Cell) -> Bool
-    checkPos grid (x, y, pc) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid !! y !! x == pc
+    checkPos :: Grid -> (Int, Int, Cell) -> Bool
+    checkPos grid (x, y, pc) =
+      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid Vec.! (y * hGoGrid + x) == cellToChar pc
     delDir :: [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
     delDir acc (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 
 -- True if is dist <= maxDist
-distEmptyCellMap :: [[Cell]] -> Int -> [[Bool]]
+distEmptyCellMap :: Grid -> Int -> GridBool
 distEmptyCellMap grille maxDist =
-  let initMap = map (map (== EmptyCell)) grille
+  let initMap = Vec.map (== cellToChar EmptyCell) grille
       iterator = [1 .. maxDist]
-   in map (map not) $ foldl' (\b _ -> addDist1 b) initMap iterator
+   in Vec.map not $ foldl' (\b _ -> addDist1 b) initMap iterator
   where
-    addDist1 :: [[Bool]] -> [[Bool]]
-    addDist1 grid =
-      [[grid !! y !! x && not (checkNeighbour grid x y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-    checkNeighbour :: [[Bool]] -> Int -> Int -> Bool
+    addDist1 :: GridBool -> GridBool
+    addDist1 grid = Vec.imap (\i e -> e && not (checkNeighbour grid (mod i hGoGrid) (div i hGoGrid))) grid
+    checkNeighbour :: GridBool -> Int -> Int -> Bool
     checkNeighbour grd x y =
       checkPos grd (x + 1) y ||
       checkPos grd x (y + 1) ||
@@ -320,39 +322,41 @@ distEmptyCellMap grille maxDist =
       checkPos grd (x - 1) y ||
       checkPos grd (x + 1) (y + 1) ||
       checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
-    checkPos :: [[Bool]] -> Int -> Int -> Bool
-    checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd !! y !! x)
+    checkPos :: GridBool -> Int -> Int -> Bool
+    checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
 
 -- /!\ no valide play if the map is Empty!
-validIACoords :: [[Cell]] -> Player -> Int -> [[Bool]]
+validIACoords :: Grid -> Player -> Int -> GridBool
 validIACoords grd p d =
-  let empty = map (map (== EmptyCell)) grd
+  let empty = Vec.map (== cellToChar EmptyCell) grd
       grd_dist = distEmptyCellMap grd d
-      emptyAndDist = [[empty !! y !! x && grd_dist !! y !! x | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
       v = delDoubleThree grd p emptyAndDist
    in v
 
 sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
-sumTuples tupA tupB = (fst tupA + fst tupB, snd tupA + snd tupB)
+sumTuples (a1, a2) (b1, b2) = (a1 + b1, a2 + b2)
 
 ------------
 -- SOLVER --
 ------------
-solver :: [[Cell]] -> Player -> Int -> Int -> Coord
+solver :: Grid -> Player -> Int -> Int -> Coord
 solver = miniWrapper
 
-countDir :: [[Cell]] -> Player -> Coord -> (Int, Int) -> Int
+countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player (cx, cy) (dx, dy) =
   let (_, nb) = foldl' sumDist (True, 0) [1 .. 4]
    in nb
   where
     sumDist (b, nb) d =
       let (cx', cy') = (cx + d * dx, cy + d * dy)
-       in if b && 0 <= cx' && 0 <= cy' && hGoGrid > cx' && hGoGrid > cy' && grid !! cy' !! cx' == playerToPiece player
+       in if b &&
+             0 <= cx' &&
+             0 <= cy' && hGoGrid > cx' && hGoGrid > cy' && grid Vec.! (cy' * hGoGrid + cx') == playerToChar player
             then (True, nb + 1)
             else (False, nb)
 
-moveScoring :: [[Cell]] -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+moveScoring :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
 moveScoring grid capWhite capBlack player move =
   let countedDir = map (countDir grid player move) allDir
       sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
@@ -381,26 +385,26 @@ moveScoring grid capWhite capBlack player move =
     transformToScore precSco count = precSco + countToScore count
 
 --- if int < 0
-moreThanOne :: [[Cell]] -> Coord -> Int -> (Int, Int) -> Int
-moreThanOne grid move count direction
+moreThanOne :: Grid -> Coord -> Int -> (Int, Int) -> Int
+moreThanOne grid (cx, cy) count direction
   | count > 1 = 2
-  | 0 > fst move || 0 > snd move = count
-  | (hGoGrid - 1) < fst move || (hGoGrid - 1) < snd move = count
-  | EmptyCell == gridPiece = count
-  | otherwise = moreThanOne grid (sumTuples move direction) (count + 1) direction
+  | 0 > cx || 0 > cy = count
+  | (hGoGrid - 1) < cx || (hGoGrid - 1) < cy = count
+  | cellToChar EmptyCell == gridPiece = count
+  | otherwise = moreThanOne grid (sumTuples (cx, cy) direction) (count + 1) direction
   where
-    gridPiece = grid !! snd move !! fst move
+    gridPiece = grid Vec.! (cy * hGoGrid + cx)
 
-worthMoveIA :: [[Cell]] -> Coord -> Bool
+worthMoveIA :: Grid -> Coord -> Bool
 worthMoveIA grid move = True `elem` render
   where
     dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
-    removeCoordIA :: [[Cell]] -> Coord -> (Int, Int) -> Int
+    removeCoordIA :: Grid -> Coord -> (Int, Int) -> Int
     removeCoordIA grd mv direction = moreThanOne grd (sumTuples mv direction) 0 direction
     sumDir = map (removeCoordIA grid move) allDir
     render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
 
-nextMoves :: [[Cell]] -> Player -> [Coord]
+nextMoves :: Grid -> Player -> [Coord]
 nextMoves grid player =
   let moves = validCoordToList $ validIACoords grid player 1
       optiMoves = filter (worthMoveIA grid) moves
@@ -410,7 +414,7 @@ nextMoves grid player =
                else moves
         else optiMoves
 
-negaMax :: [[Cell]] -> Player -> Int -> Int -> Int -> Int -> Int -> Int
+negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
   let moves = nextMoves grid player
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
@@ -438,7 +442,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       | s1 < s2 = GT
       | otherwise = EQ
 
-miniWrapper :: [[Cell]] -> Player -> Int -> Int -> Coord
+miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
   let depth = 2 -- In reality depth = depth + 2
       alpha = div (minBound :: Int) 8
