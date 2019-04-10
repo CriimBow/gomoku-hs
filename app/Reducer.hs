@@ -3,9 +3,9 @@ module Reducer where
 import Constant (allDir, hGoGrid)
 import Control.DeepSeq
 import Control.Lens.Combinators (imap)
+import Data.Char (chr)
 import Data.List (foldl', sortBy)
 import qualified Data.Vector.Unboxed as Vec
-import Data.Char (chr)
 
 -- import Control.Parallel (par)
 -- import Data.List (elemIndex)
@@ -62,30 +62,30 @@ initState = Home (GameSolo PlayerWhite)
 initGameState :: GameMode -> AppState
 initGameState mode =
   let grid = Vec.replicate (hGoGrid * hGoGrid) $ cellToChar EmptyCell
-  in GameState
-      { goGrid =
-          case mode of
-            GameSolo PlayerBlack ->
-              Vec.imap putFirstPiece grid
-            _ -> grid
-      , gameMode = mode
-      , playerTurn =
-          case mode of
-            GameSolo PlayerBlack -> PlayerBlack
-            _ -> PlayerWhite
-      , lastIATimeForPlay = 0.0
-      , cursorSuggestion = Nothing
-      , cursor = (9, 9)
-      , cursorVisible = True
-      , end = Nothing
-      , nbPieceCapPBlack = 0
-      , nbPieceCapPWhite = 0
-      }
-  where
-    putFirstPiece :: Int -> Char -> Char
-    putFirstPiece idx _
-        | idx == hGoGrid * 8 + 8 = cellToChar PieceWhite
-        | otherwise = cellToChar EmptyCell
+   in GameState
+        { goGrid =
+            case mode of
+              GameSolo PlayerBlack ->
+                Vec.imap
+                  (\i e ->
+                     if i == hGoGrid * 8 + 8
+                       then cellToChar PieceWhite
+                       else e)
+                  grid
+              _ -> grid
+        , gameMode = mode
+        , playerTurn =
+            case mode of
+              GameSolo PlayerBlack -> PlayerBlack
+              _ -> PlayerWhite
+        , lastIATimeForPlay = 0.0
+        , cursorSuggestion = Nothing
+        , cursor = (9, 9)
+        , cursorVisible = True
+        , end = Nothing
+        , nbPieceCapPBlack = 0
+        , nbPieceCapPWhite = 0
+        }
 
 -- UPDATE STATE
 data CursorDir
@@ -101,6 +101,7 @@ moveCursor GameState {cursor = (x, y)} d =
     CursorDown -> (x, (y + 1) `mod` hGoGrid)
     CursorRight -> ((x + 1) `mod` hGoGrid, y)
     CursorLeft -> ((x - 1) `mod` hGoGrid, y)
+moveCursor g _ = g
 
 handelPlayCoord :: Coord -> AppState -> AppState
 handelPlayCoord cr s =
@@ -116,13 +117,16 @@ posePiece :: Coord -> Player -> Grid -> Grid
 posePiece (cx, cy) p grid = Vec.imap putPiece grid
   where
     putPiece :: Int -> Char -> Char
-    putPiece idx c = if idx == hGoGrid * cy + cx
-                     then playerToPieceVec p
-                     else c
+    putPiece idx c =
+      if idx == hGoGrid * cy + cx
+        then playerToPieceVec p
+        else c
 
 posePieceAndDelete :: Coord -> Player -> Grid -> Grid
 posePieceAndDelete cr p grd =
-  let withPiece = posePiece cr p grd
+  let withPiece :: Grid
+      withPiece = posePiece cr p grd
+      toSup :: [[(Int, Int, Player)]]
       toSup = checkCapturToSup p cr withPiece
       newGrd = supPosGrid withPiece toSup
    in newGrd
@@ -137,7 +141,6 @@ checkCaptur cr s =
         PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
 
 -- To modify
-
 mapMemoCapturToSup :: ([[[[(Int, Int, Player)]]]], [[[[(Int, Int, Player)]]]])
 mapMemoCapturToSup =
   let mw = [[map (genPosCheck (x, y) PlayerWhite) allDir | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
@@ -153,23 +156,32 @@ mapMemoCapturToSup =
 checkCapturToSup :: Player -> Coord -> Grid -> [[(Int, Int, Player)]]
 checkCapturToSup p (cx, cy) grd =
   let (mw, mn) = mapMemoCapturToSup
+      toCheck :: [[[[(Int, Int, Player)]]]]
       toCheck =
         if p == PlayerWhite
           then mw
           else mn
-   in Vec.filter (checkPoss grd) $ toCheck !! (hGoGrid * cy + cx)
+   in filter (checkPoss grd) $ toCheck !! cy !! cx
   where
-    checkPoss grid psCks = Vec.length (Vec.filter (checkPos grid) psCks) == 3
-    checkPos gd (x, y, plr) = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd !! (hGoGrid * y + x) == playerToPieceVec plr
+    checkPoss :: Grid -> [(Int, Int, Player)] -> Bool
+    checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
+    checkPos :: Grid -> (Int, Int, Player) -> Bool
+    checkPos gd (x, y, plr) =
+      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd Vec.! (hGoGrid * y + x) == playerToPieceVec plr
 
-supPosGrid :: GridBool -> [[(Int, Int, Player)]] -> GridBool
+supPosGrid :: Grid -> [[(Int, Int, Player)]] -> Grid
 supPosGrid grd toSup = foldl' supElGrd grd toSup
   where
     supElGrd :: GridBool -> [(Int, Int, Player)] -> GridBool
     supElGrd grd poss =
       let (fx, fy, _) = head poss
           (sx, sy, _) = poss !! 1
-       in Vec.imap (\i e -> if i == (fy * hGoGrid + fx) || i == (sy * hGoGrid + sx) then cellToChar EmptyCell else e) grd
+       in Vec.imap
+            (\i e ->
+               if i == (fy * hGoGrid + fx) || i == (sy * hGoGrid + sx)
+                 then cellToChar EmptyCell
+                 else e)
+            grd
 
 handelIAPlay :: AppState -> IO AppState
 handelIAPlay s = do
@@ -200,7 +212,7 @@ nextPlayer :: Player -> Player
 nextPlayer PlayerWhite = PlayerBlack
 nextPlayer PlayerBlack = PlayerWhite
 
-playerToPieceVec :: Player -> Cell
+playerToPieceVec :: Player -> Char
 playerToPieceVec PlayerWhite = '1'
 playerToPieceVec PlayerBlack = '2'
 
@@ -213,6 +225,7 @@ charToCell :: Char -> Cell
 charToCell '0' = EmptyCell
 charToCell '1' = PieceWhite
 charToCell '2' = PieceBlack
+charToCell _ = EmptyCell
 
 -- can use delDoubleThree
 validCoords :: Grid -> Player -> GridBool
