@@ -325,13 +325,37 @@ distEmptyCellMap grille maxDist =
     checkPos :: GridBool -> Int -> Int -> Bool
     checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
 
+moreThanOne :: Grid -> Coord -> Int -> (Int, Int) -> Int
+moreThanOne grid (cx, cy) count direction
+  | count > 1 = 2
+  | 0 > cx || 0 > cy = count
+  | (hGoGrid - 1) < cx || (hGoGrid - 1) < cy = count
+  | cellToChar EmptyCell == gridPiece = count
+  | otherwise = moreThanOne grid (sumTuples (cx, cy) direction) (count + 1) direction
+  where
+    gridPiece = grid Vec.! (cy * hGoGrid + cx)
+
+worthMoveIA :: Grid -> Coord -> Bool
+worthMoveIA grid move = True `elem` render
+  where
+    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
+    removeCoordIA :: Grid -> Coord -> (Int, Int) -> Int
+    removeCoordIA grd mv direction = moreThanOne grd (sumTuples mv direction) 0 direction
+    sumDir = map (removeCoordIA grid move) allDir
+    render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
+
 -- /!\ no valide play if the map is Empty!
 validIACoords :: Grid -> Player -> Int -> GridBool
 validIACoords grd p d =
   let empty = Vec.map (== cellToChar EmptyCell) grd
       grd_dist = distEmptyCellMap grd d
       emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-      v = delDoubleThree grd p emptyAndDist
+      optiMoves = Vec.imap (\idx e -> let m = (mod idx hGoGrid, div idx hGoGrid)
+                                      in e && worthMoveIA grd m) emptyAndDist
+      moves = if Vec.length (Vec.filter id optiMoves) > 4
+              then optiMoves
+              else emptyAndDist
+      v = delDoubleThree grd p moves
    in v
 
 sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
@@ -384,35 +408,12 @@ moveScoring grid capWhite capBlack player move =
     transformToScore :: Int -> Int -> Int
     transformToScore precSco count = precSco + countToScore count
 
---- if int < 0
-moreThanOne :: Grid -> Coord -> Int -> (Int, Int) -> Int
-moreThanOne grid (cx, cy) count direction
-  | count > 1 = 2
-  | 0 > cx || 0 > cy = count
-  | (hGoGrid - 1) < cx || (hGoGrid - 1) < cy = count
-  | cellToChar EmptyCell == gridPiece = count
-  | otherwise = moreThanOne grid (sumTuples (cx, cy) direction) (count + 1) direction
-  where
-    gridPiece = grid Vec.! (cy * hGoGrid + cx)
-
-worthMoveIA :: Grid -> Coord -> Bool
-worthMoveIA grid move = True `elem` render
-  where
-    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
-    removeCoordIA :: Grid -> Coord -> (Int, Int) -> Int
-    removeCoordIA grd mv direction = moreThanOne grd (sumTuples mv direction) 0 direction
-    sumDir = map (removeCoordIA grid move) allDir
-    render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
-
 nextMoves :: Grid -> Player -> [Coord]
 nextMoves grid player =
   let moves = validCoordToList $ validIACoords grid player 1
-      optiMoves = filter (worthMoveIA grid) moves
-   in if length optiMoves < 4
-        then if null moves
-               then validCoordToList $ validCoords grid player
-               else moves
-        else optiMoves
+   in if null moves
+      then validCoordToList $ validCoords grid player
+      else moves
 
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
@@ -444,7 +445,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 2 -- In reality depth = depth + 2
+  let depth = 3 -- In reality depth = depth + 2
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMoves grid player
