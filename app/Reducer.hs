@@ -1,10 +1,10 @@
 module Reducer where
 
-import Constant (allDir, hGoGrid)
+import Constant (allDir, allDirVb, gridInitVb, hGoGrid)
 import Control.DeepSeq
 import Data.List (foldl', sortBy)
-import qualified Data.Vector.Unboxed as Vec
 import qualified Data.Vector as Vb
+import qualified Data.Vector.Unboxed as Vec
 
 -- import Control.Parallel (par)
 -- import Data.List (elemIndex)
@@ -125,7 +125,7 @@ posePieceAndDelete :: Coord -> Player -> Grid -> Grid
 posePieceAndDelete cr p grd =
   let withPiece :: Grid
       withPiece = posePiece cr p grd
-      toSup :: [[(Int, Int, Player)]]
+      toSup :: Vb.Vector (Vb.Vector (Int, Int, Player))
       toSup = checkCapturToSup p cr withPiece
       newGrd = supPosGrid withPiece toSup
    in newGrd
@@ -139,43 +139,43 @@ checkCaptur cr s =
         PlayerBlack -> s {goGrid = newGrd, nbPieceCapPBlack = nbPieceCapPBlack s + nbCap}
         PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
 
--- To modify
-mapMemoCapturToSup :: (Vb.Vector [[(Int, Int, Player)]], Vb.Vector [[(Int, Int, Player)]])
-mapMemoCapturToSup =
-  let grid = Vb.replicate (hGoGrid * hGoGrid) True
-      mw = Vb.imap (\i _ -> map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerWhite) allDir) grid
-      mb = Vb.imap (\i _ -> map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerBlack) allDir) grid
+memoCapturToSup ::
+     (Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Player))), Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Player))))
+memoCapturToSup =
+  let mw = Vb.imap (\i _ -> Vb.map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerWhite) allDirVb) gridInitVb
+      mb = Vb.imap (\i _ -> Vb.map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerBlack) allDirVb) gridInitVb
    in (mw, mb)
   where
     genPosCheck (cx, cy) player (dx, dy) =
-      [ (cx + dx, cy + dy, nextPlayer player)
-      , (cx + dx * 2, cy + dy * 2, nextPlayer player)
-      , (cx + dx * 3, cy + dy * 3, player)
-      ]
+      Vb.fromList
+        [ (cx + dx, cy + dy, nextPlayer player)
+        , (cx + dx * 2, cy + dy * 2, nextPlayer player)
+        , (cx + dx * 3, cy + dy * 3, player)
+        ]
 
-checkCapturToSup :: Player -> Coord -> Grid -> [[(Int, Int, Player)]]
+checkCapturToSup :: Player -> Coord -> Grid -> Vb.Vector (Vb.Vector (Int, Int, Player))
 checkCapturToSup p (cx, cy) grd =
-  let (mw, mn) = mapMemoCapturToSup
-      toCheck :: Vb.Vector [[(Int, Int, Player)]]
+  let (mw, mn) = memoCapturToSup
+      toCheck :: Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Player)))
       toCheck =
         if p == PlayerWhite
           then mw
           else mn
-   in filter (checkPoss grd) $ toCheck Vb.! (cy * hGoGrid + cx)
+   in Vb.filter (checkPoss grd) $ toCheck Vb.! (cy * hGoGrid + cx)
   where
-    checkPoss :: Grid -> [(Int, Int, Player)] -> Bool
-    checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
+    checkPoss :: Grid -> Vb.Vector (Int, Int, Player) -> Bool
+    checkPoss grid psCks = Vb.length (Vb.filter (checkPos grid) psCks) == 3
     checkPos :: Grid -> (Int, Int, Player) -> Bool
     checkPos gd (x, y, plr) =
       x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && gd Vec.! (hGoGrid * y + x) == playerToChar plr
 
-supPosGrid :: Grid -> [[(Int, Int, Player)]] -> Grid
+supPosGrid :: Grid -> Vb.Vector (Vb.Vector (Int, Int, Player)) -> Grid
 supPosGrid grd toSup = foldl' supElGrd grd toSup
   where
-    supElGrd :: Grid -> [(Int, Int, Player)] -> Grid
+    supElGrd :: Grid -> Vb.Vector (Int, Int, Player) -> Grid
     supElGrd gd poss =
-      let (fx, fy, _) = head poss
-          (sx, sy, _) = poss !! 1
+      let (fx, fy, _) = Vb.head poss
+          (sx, sy, _) = poss Vb.! 1
        in Vec.imap
             (\i e ->
                if i == (fy * hGoGrid + fx) || i == (sy * hGoGrid + sx)
@@ -227,7 +227,6 @@ charToCell '1' = PieceWhite
 charToCell '2' = PieceBlack
 charToCell _ = EmptyCell
 
--- can use delDoubleThree
 validCoords :: Grid -> Player -> GridBool
 validCoords grd p = delDoubleThree grd p (Vec.map (== cellToChar EmptyCell) grd)
 
@@ -235,6 +234,7 @@ validCoord :: Grid -> Player -> Coord -> Bool
 validCoord grd p (cx, cy) =
   cx >= 0 && cx < hGoGrid && cy >= 0 && cy < hGoGrid && validCoords grd p Vec.! (cy * hGoGrid + cx)
 
+-- Vb ?
 validCoordToList :: GridBool -> [(Int, Int)]
 validCoordToList grid = [(x, y) | x <- [0 .. hGoGrid - 1], y <- [0 .. hGoGrid - 1], grid Vec.! (y * hGoGrid + x)]
 
@@ -248,10 +248,10 @@ checkEnd cr s
   where
     checkAlign5 :: Coord -> Grid -> Player -> Bool
     checkAlign5 c grd p = checkAllPos grd p $ allDir >>= genPosCheck c
-    maskCoef :: [[Int]]
-    maskCoef = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
+    maskCf :: [[Int]]
+    maskCf = [[-4, -3, -2, -1, 0], [-3, -2, -1, 0, 1], [-2, -1, 0, 1, 2]]
     genPosCheck :: Coord -> Coord -> [[Coord]]
-    genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCoef
+    genPosCheck (cx, cy) (dx, dy) = map (map (\k -> (cx + dx * k, cy + dy * k))) maskCf
     checkAllPos :: Grid -> Player -> [[Coord]] -> Bool
     checkAllPos grd p lpos =
       let tmp = map (length . filter (checkPos grd p)) lpos
@@ -263,44 +263,51 @@ checkEnd cr s
 ------------
 -- SOLVER --
 ------------
--- OPTI ?
--- Constant Empty Grid ?
-mapMemoDoubleThree :: (Vb.Vector [([(Int, Int, Cell)], (Int, Int))], Vb.Vector [([(Int, Int, Cell)], (Int, Int))])
-mapMemoDoubleThree =
-  let grid = Vb.replicate (hGoGrid * hGoGrid) True
-      maskWhite = maskCoef $ playerToPiece PlayerWhite
-      maskBlack = maskCoef $ playerToPiece PlayerBlack
-      genWhite = Vb.imap (\i _ ->  allDir >>= genPosCheck maskWhite (mod i hGoGrid, div i hGoGrid)) grid
-      genBlack = Vb.imap (\i _ ->  allDir >>= genPosCheck maskBlack (mod i hGoGrid, div i hGoGrid)) grid
+maskCoef :: Cell -> [[(Int, Cell)]]
+maskCoef pc =
+  [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
+  , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
+  , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (1, EmptyCell)]
+  , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
+  , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
+  ]
+
+memoMaskWhite :: [[(Int, Cell)]]
+memoMaskWhite = maskCoef $ playerToPiece PlayerWhite
+
+memoMaskBlack :: [[(Int, Cell)]]
+memoMaskBlack = maskCoef $ playerToPiece PlayerBlack
+
+memoDoubleThree ::
+     ( Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)))
+     , Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int))))
+memoDoubleThree =
+  let genWhite =
+        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskWhite (mod i hGoGrid, div i hGoGrid)) gridInitVb
+      genBlack =
+        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskBlack (mod i hGoGrid, div i hGoGrid)) gridInitVb
    in (genWhite, genBlack)
   where
-    maskCoef :: Cell -> [[(Int, Cell)]]
-    maskCoef pc =
-      [ [(-3, EmptyCell), (-2, pc), (-1, pc), (0, EmptyCell), (1, EmptyCell)]
-      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, pc), (2, EmptyCell)]
-      , [(-4, EmptyCell), (-3, pc), (-2, pc), (-1, EmptyCell), (0, EmptyCell), (1, EmptyCell)]
-      , [(-2, EmptyCell), (-1, pc), (0, EmptyCell), (1, EmptyCell), (2, pc), (3, EmptyCell)]
-      , [(-1, EmptyCell), (0, EmptyCell), (1, pc), (2, EmptyCell), (3, pc), (4, EmptyCell)]
-      ]
-    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [([(Int, Int, Cell)], (Int, Int))]
-    genPosCheck msk (cx, cy) (dx, dy) = map (\r -> (map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
+    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [(Vb.Vector (Int, Int, Cell), (Int, Int))]
+    genPosCheck msk (cx, cy) (dx, dy) =
+      map (\r -> (Vb.fromList $ map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
 
 delDoubleThree :: Grid -> Player -> GridBool -> GridBool
 delDoubleThree grd p grd_old =
-  let (mw, mn) = mapMemoDoubleThree
+  let (mw, mn) = memoDoubleThree
       toCheck =
         if p == PlayerWhite
           then mw
           else mn
    in Vec.imap (\i e -> e && checkAllPos grd (toCheck Vb.! i)) grd_old
   where
-    checkAllPos :: Grid -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
+    checkAllPos :: Grid -> Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
     checkAllPos grida lpos =
-      let tmp = map snd $ filter (checkLPos grida) lpos
-          dDir = foldl' delDir [] tmp
+      let tmp = Vb.map snd $ Vb.filter (checkLPos grida) lpos
+          dDir = Vb.foldl' delDir [] tmp
        in 1 >= length dDir
-    checkLPos :: Grid -> ([(Int, Int, Cell)], (Int, Int)) -> Bool
-    checkLPos grd' (lp, _) = length lp == length (filter (checkPos grd') lp)
+    checkLPos :: Grid -> (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
+    checkLPos grd' (lp, _) = Vb.length lp == Vb.length (Vb.filter (checkPos grd') lp)
     checkPos :: Grid -> (Int, Int, Cell) -> Bool
     checkPos grid (x, y, pc) =
       x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid Vec.! (y * hGoGrid + x) == cellToChar pc
@@ -352,11 +359,16 @@ validIACoords grd p d =
   let empty = Vec.map (== cellToChar EmptyCell) grd
       grd_dist = distEmptyCellMap grd d
       emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-      optiMoves = Vec.imap (\idx e -> let m = (mod idx hGoGrid, div idx hGoGrid)
-                                      in e && worthMoveIA grd m) emptyAndDist
-      moves = if Vec.length (Vec.filter id optiMoves) > 4
-              then optiMoves
-              else emptyAndDist
+      optiMoves =
+        Vec.imap
+          (\idx e ->
+             let m = (mod idx hGoGrid, div idx hGoGrid)
+              in e && worthMoveIA grd m)
+          emptyAndDist
+      moves =
+        if Vec.length (Vec.filter id optiMoves) > 4
+          then optiMoves
+          else emptyAndDist
       v = delDoubleThree grd p moves
    in v
 
@@ -414,8 +426,8 @@ nextMoves :: Grid -> Player -> [Coord]
 nextMoves grid player =
   let moves = validCoordToList $ validIACoords grid player 1
    in if null moves
-      then validCoordToList $ validCoords grid player
-      else moves
+        then validCoordToList $ validCoords grid player
+        else moves
 
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
