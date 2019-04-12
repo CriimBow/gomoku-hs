@@ -266,12 +266,14 @@ checkEnd cr s
 -- SOLVER --
 ------------
 -- OPTI ?
-mapMemoDoubleThree :: ([[[([(Int, Int, Cell)], (Int, Int))]]], [[[([(Int, Int, Cell)], (Int, Int))]]])
+-- Constant Empty Grid ?
+mapMemoDoubleThree :: (Vb.Vector [([(Int, Int, Cell)], (Int, Int))], Vb.Vector [([(Int, Int, Cell)], (Int, Int))])
 mapMemoDoubleThree =
-  let maskWhite = maskCoef $ playerToPiece PlayerWhite
+  let grid = Vb.replicate (hGoGrid * hGoGrid) True
+      maskWhite = maskCoef $ playerToPiece PlayerWhite
       maskBlack = maskCoef $ playerToPiece PlayerBlack
-      genWhite = [[allDir >>= genPosCheck maskWhite (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-      genBlack = [[allDir >>= genPosCheck maskBlack (x, y) | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+      genWhite = Vb.imap (\i _ ->  allDir >>= genPosCheck maskWhite (mod i hGoGrid, div i hGoGrid)) grid
+      genBlack = Vb.imap (\i _ ->  allDir >>= genPosCheck maskBlack (mod i hGoGrid, div i hGoGrid)) grid
    in (genWhite, genBlack)
   where
     maskCoef :: Cell -> [[(Int, Cell)]]
@@ -292,7 +294,7 @@ delDoubleThree grd p grd_old =
         if p == PlayerWhite
           then mw
           else mn
-   in Vec.imap (\i e -> e && checkAllPos grd (toCheck !! div i hGoGrid !! mod i hGoGrid)) grd_old
+   in Vec.imap (\i e -> e && checkAllPos grd (toCheck Vb.! i)) grd_old
   where
     checkAllPos :: Grid -> [([(Int, Int, Cell)], (Int, Int))] -> Bool
     checkAllPos grida lpos =
