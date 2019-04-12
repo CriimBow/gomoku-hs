@@ -2,8 +2,6 @@ module Reducer where
 
 import Constant (allDir, hGoGrid)
 import Control.DeepSeq
-import Control.Lens.Combinators (imap)
-import Data.Char (chr)
 import Data.List (foldl', sortBy)
 import qualified Data.Vector.Unboxed as Vec
 import qualified Data.Vector as Vb

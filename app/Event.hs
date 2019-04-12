@@ -3,7 +3,6 @@ module Event where
 import Brick (BrickEvent(..), EventM, Next, continue, halt)
 import Control.Monad.IO.Class (liftIO)
 import Name (Name)
-import System.CPUTime
 
 import qualified Graphics.Vty as V
 import qualified Reducer as R
@@ -42,11 +41,11 @@ handleEvent g (VtyEvent (V.EvKey V.KLeft [])) =
     R.SoloSelectPlayer _ -> R.SoloSelectPlayer R.PlayerWhite
 handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
   case g of
-    R.GameState {R.gameMode = gmdMd, R.playerTurn = plTrn, R.cursor = cr, R.goGrid = grd} ->
-      if not $ R.validCoord (R.goGrid g) (R.playerTurn g) cr
+    R.GameState {} ->
+      if not $ R.validCoord (R.goGrid g) (R.playerTurn g) (R.cursor g)
         then continue g
-        else let nextG = R.handelPlayCoord cr (g {R.cursorSuggestion = Nothing})
-              in case gmdMd of
+        else let nextG = R.handelPlayCoord (R.cursor g) (g {R.cursorSuggestion = Nothing})
+              in case (R.gameMode g) of
                    R.GameMulti -> continue nextG
                    R.GameSolo _ -> liftIO (R.handelIAPlay nextG) >>= continue
     R.Home mode ->

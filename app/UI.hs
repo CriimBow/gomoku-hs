@@ -7,21 +7,17 @@ import Brick
   , AttrName
   , Widget
   , attrMap
-  , bg
   , hBox
   , on
   , padAll
   , padBottom
-  , padLeft
   , padLeftRight
-  , padRight
   , padTop
   , str
   , vBox
   , withAttr
   , withBorderStyle
   )
-import Control.Lens.Combinators (imap)
 import Name (Name)
 
 import Brick.Types (Padding(..))
@@ -122,13 +118,14 @@ drawGame R.GameState { R.goGrid = grd
         R.EmptyCell -> withAttr emptyAttr cw
     cw :: Widget Name
     cw = str "{#}" -- "() "
+drawGame _ = str ""
 
 drawHome :: R.GameMode -> Widget Name
 drawHome mode = hBox wg
   where
     wg =
       case mode of
-        R.GameSolo p -> [padAll 1 $ withAttr selectedAttr $ str "Solo", padAll 1 $ str "Multi"]
+        R.GameSolo _ -> [padAll 1 $ withAttr selectedAttr $ str "Solo", padAll 1 $ str "Multi"]
         R.GameMulti -> [padAll 1 $ str "Solo", padAll 1 $ withAttr selectedAttr $ str "Multi"]
 
 drawSoloSelectPlayer :: R.Player -> Widget Name
