@@ -365,11 +365,14 @@ validIACoords grd p d =
              let m = (mod idx hGoGrid, div idx hGoGrid)
               in e && worthMoveIA grd m)
           emptyAndDist
+      {-
       moves =
-        if Vec.length (Vec.filter id optiMoves) > 4
+        if Vec.length (Vec.filter id optiMoves) > 8000
           then optiMoves
           else emptyAndDist
       v = delDoubleThree grd p moves
+      -}
+      v = delDoubleThree grd p emptyAndDist
    in v
 
 sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
@@ -398,15 +401,15 @@ moveScoring :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
 moveScoring grid capWhite capBlack player move =
   let countedDir = map (countDir grid player move) allDir
       sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
-      newCap = 2 * length (checkCapturToSup player move grid)
+      newCap = 2 * Vb.length (checkCapturToSup player move grid)
       nbCap =
         if player == PlayerWhite
           then capWhite + newCap
           else capBlack + newCap
       scoreCapture =
-        if nbCap == 10
+        if nbCap >= 10
           then 1000000
-          else 10000 * nbCap
+          else 50 * nbCap
       score = scoreCapture + foldl' transformToScore 0 sumSameDir
    in if player == PlayerWhite
         then (score, nbCap, capBlack)
@@ -416,7 +419,7 @@ moveScoring grid capWhite capBlack player move =
       | count == 0 = 0
       | count == 1 = 1
       | count == 2 = 10
-      | count == 3 = 100
+      | count == 3 = 300
       | count == 4 = 1000
       | otherwise = 1000000
     transformToScore :: Int -> Int -> Int
