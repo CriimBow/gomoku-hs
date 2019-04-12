@@ -429,6 +429,12 @@ nextMoves grid player =
         then validCoordToList $ validCoords grid player
         else moves
 
+compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
+compF (_, (s1, _, _)) (_, (s2, _, _))
+  | s1 > s2 = LT
+  | s1 < s2 = GT
+  | otherwise = EQ
+
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
   let moves = nextMoves grid player
@@ -450,12 +456,6 @@ negaMax grid player depth alpha beta capWhite capBlack =
           then foldl' abPruning alpha movesSort
           else maximum $ map (\(_, (s, _, _)) -> s) movesSort
    in res
-  where
-    compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
-    compF (_, (s1, _, _)) (_, (s2, _, _))
-      | s1 > s2 = LT
-      | s1 < s2 = GT
-      | otherwise = EQ
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
@@ -479,9 +479,3 @@ miniWrapper grid player capWhite capBlack =
                      else (a, co)
       (_, bestMove) = foldl' abPruning (alpha, (-1, -1)) movesSort
    in bestMove
-  where
-    compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
-    compF (_, (s1, _, _)) (_, (s2, _, _))
-      | s1 > s2 = LT
-      | s1 < s2 = GT
-      | otherwise = EQ
