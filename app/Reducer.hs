@@ -6,6 +6,7 @@ import Control.Lens.Combinators (imap)
 import Data.Char (chr)
 import Data.List (foldl', sortBy)
 import qualified Data.Vector.Unboxed as Vec
+import qualified Data.Vector as Vb
 
 -- import Control.Parallel (par)
 -- import Data.List (elemIndex)
@@ -141,10 +142,11 @@ checkCaptur cr s =
         PlayerWhite -> s {goGrid = newGrd, nbPieceCapPWhite = nbPieceCapPWhite s + nbCap}
 
 -- To modify
-mapMemoCapturToSup :: ([[[[(Int, Int, Player)]]]], [[[[(Int, Int, Player)]]]])
+mapMemoCapturToSup :: (Vb.Vector [[(Int, Int, Player)]], Vb.Vector [[(Int, Int, Player)]])
 mapMemoCapturToSup =
-  let mw = [[map (genPosCheck (x, y) PlayerWhite) allDir | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
-      mb = [[map (genPosCheck (x, y) PlayerBlack) allDir | x <- [0 .. hGoGrid - 1]] | y <- [0 .. hGoGrid - 1]]
+  let grid = Vb.replicate (hGoGrid * hGoGrid) True
+      mw = Vb.imap (\i _ -> map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerWhite) allDir) grid
+      mb = Vb.imap (\i _ -> map (genPosCheck (mod i hGoGrid, div i hGoGrid) PlayerBlack) allDir) grid
    in (mw, mb)
   where
     genPosCheck (cx, cy) player (dx, dy) =
@@ -156,12 +158,12 @@ mapMemoCapturToSup =
 checkCapturToSup :: Player -> Coord -> Grid -> [[(Int, Int, Player)]]
 checkCapturToSup p (cx, cy) grd =
   let (mw, mn) = mapMemoCapturToSup
-      toCheck :: [[[[(Int, Int, Player)]]]]
+      toCheck :: Vb.Vector [[(Int, Int, Player)]]
       toCheck =
         if p == PlayerWhite
           then mw
           else mn
-   in filter (checkPoss grd) $ toCheck !! cy !! cx
+   in filter (checkPoss grd) $ toCheck Vb.! (cy * hGoGrid + cx)
   where
     checkPoss :: Grid -> [(Int, Int, Player)] -> Bool
     checkPoss grid psCks = length (filter (checkPos grid) psCks) == 3
