@@ -325,7 +325,12 @@ distEmptyCellMap grille maxDist =
     addDist1 grid = Vec.imap (\i e -> e && not (checkNeighbour grid (mod i hGoGrid) (div i hGoGrid))) grid
     checkNeighbour :: GridBool -> Int -> Int -> Bool
     checkNeighbour grd x y =
-      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
+      checkPos grd (x + 1) y ||
+      checkPos grd x (y + 1) ||
+      checkPos grd x (y - 1) ||
+      checkPos grd (x - 1) y ||
+      checkPos grd (x + 1) (y + 1) ||
+      checkPos grd (x - 1) (y + 1) || checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y - 1)
     checkPos :: GridBool -> Int -> Int -> Bool
     checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
 
@@ -379,7 +384,7 @@ moveScoring grid capWhite capBlack player move =
 
 -- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> Player -> [Coord]
-nextMoves grid player = validCoordToList $ validIACoords grid player 2
+nextMoves grid player = validCoordToList $ validIACoords grid player 1
   where
     validIACoords :: Grid -> Player -> Int -> GridBool
     validIACoords grd p d =
@@ -389,7 +394,7 @@ nextMoves grid player = validCoordToList $ validIACoords grid player 2
        in emptyAndDist
 
 nextMovesFirst :: Grid -> Player -> [Coord]
-nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 2
+nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 1
   where
     validIACoordsFirst :: Grid -> Player -> Int -> GridBool
     validIACoordsFirst grd p d =
@@ -412,7 +417,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       (_, (_, _, scoreMax)) = head movesSort
-      movesSortFilter = filter (\(_, (_, _, s)) -> s >= (div scoreMax 2)) movesSort
+      movesSortBest = take 5 movesSort
       abPruning a ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then a
@@ -425,8 +430,8 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesSortFilter
-          else maximum $ map (\(_, (s, _, _)) -> s) movesSortFilter
+          then foldl' abPruning alpha movesSortBest
+          else maximum $ map (\(_, (s, _, _)) -> s) movesSortBest
    in res
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
@@ -439,7 +444,7 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       (_, (_, _, scoreMax)) = head movesSort
-      movesSortFilter = filter (\(_, (_, _, s)) -> s >= (div scoreMax 2)) movesSort
+      movesSortBest = take 5 movesSort
       abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then (a, co)
@@ -451,5 +456,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (-1, -1)) movesSortFilter
+      (_, bestMove) = foldl' abPruning (alpha, (-1, -1)) movesSortBest
    in bestMove
