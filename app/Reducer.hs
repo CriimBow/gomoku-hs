@@ -356,8 +356,23 @@ countDir grid player (cx, cy) (dx, dy) =
             then (True, nb + 1)
             else (False, nb)
 
-moveScoring :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
-moveScoring grid capWhite capBlack player move =
+
+moveScoringDouble :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+moveScoringDouble grid capWhite capBlack player move =
+ let (s, nw,nb) = moveScoringTerm grid capWhite capBlack player move
+     newGrid = posePieceAndDelete move player grid
+ in if s > 5000
+    then (s, nw,nb)
+    else (s - maxScoringGrid newGrid nw nb (nextPlayer player), nw, nb)
+
+maxScoringGrid ::Grid -> Int -> Int -> Player -> Int
+maxScoringGrid grid capWhite capBlack player = maximum $
+  map (\(s, _, _) -> s) $
+    map (\c -> moveScoringTerm grid capWhite capBlack player c) $
+      nextMoves grid
+
+moveScoringTerm :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+moveScoringTerm grid capWhite capBlack player move =
   let countedDir = map (countDir grid player move) allDir
       sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
       newCap = 2 * Vb.length (checkCapturToSup player move grid)
@@ -369,30 +384,29 @@ moveScoring grid capWhite capBlack player move =
         if nbCap >= 10
           then 10000
           else 16 * newCap
-      score = scoreCapture + foldl' transformToScore 0 sumSameDir
-   in if player == PlayerWhite
-        then (score, nbCap, capBlack)
-        else (score, capWhite, nbCap)
-  where
-    countToScore count
-      | count == 2 = 1
-      | count == 3 = 9
-      | count == 4 = 20
-      | count >= 5 = 10000
-      | otherwise = 0
-    transformToScore :: Int -> Int -> Int
-    transformToScore precSco count = precSco + countToScore count
+      score = scoreCapture + foldl' (\p c -> p + countToScore c) 0 sumSameDir
+  in if player == PlayerWhite
+      then (score, nbCap, capBlack)
+      else (score, capWhite, nbCap)
+
+countToScore :: Int -> Int
+countToScore count
+  | count == 2 = 1
+  | count == 3 = 9
+  | count == 4 = 20
+  | count >= 5 = 10000
+  | otherwise = 0
 
 -- /!\ no valide play if the map is Empty!
-nextMoves :: Grid -> Player -> [Coord]
-nextMoves grid player = validCoordToList $ validIACoords grid player 1
-  where
-    validIACoords :: Grid -> Player -> Int -> GridBool
-    validIACoords grd p d =
-      let empty = Vec.map (== cellToChar EmptyCell) grd
-          grd_dist = distEmptyCellMap grd d
-          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-       in emptyAndDist
+nextMoves :: Grid -> [Coord]
+nextMoves grid = validCoordToList $ validIACoords grid 1
+
+validIACoords :: Grid -> Int -> GridBool
+validIACoords grd d =
+  let empty = Vec.map (== cellToChar EmptyCell) grd
+      grd_dist = distEmptyCellMap grd d
+      emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
+  in emptyAndDist
 
 compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
 compF (_, (s1, _, _)) (_, (s2, _, _))
@@ -402,12 +416,11 @@ compF (_, (s1, _, _)) (_, (s2, _, _))
 
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
-  let moves = nextMoves grid player
+  let moves = nextMoves grid
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
-      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoringDouble grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      (_, (_, _, scoreMax)) = head movesSort
-      movesSortBest = take 17 movesSort
+      movesSortBest = take 9 movesSort
       abPruning a ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then a
@@ -427,23 +440,23 @@ negaMax grid player depth alpha beta capWhite capBlack =
 -- Wrapper
 nextMovesFirst :: Grid -> Player -> [Coord]
 nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 2
-  where
-    validIACoordsFirst :: Grid -> Player -> Int -> GridBool
-    validIACoordsFirst grd p d =
-      let empty = Vec.map (== cellToChar EmptyCell) grd
-          grd_dist = distEmptyCellMap grd d
-          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-          v = delDoubleThree grd p emptyAndDist
-       in v
+
+validIACoordsFirst :: Grid -> Player -> Int -> GridBool
+validIACoordsFirst grd p d =
+  let empty = Vec.map (== cellToChar EmptyCell) grd
+      grd_dist = distEmptyCellMap grd d
+      emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
+      v = delDoubleThree grd p emptyAndDist
+  in v
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 4 -- In reality depth = depth + 2
+  let depth = 2 -- In reality depth = depth + 3
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
-      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoringDouble grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
