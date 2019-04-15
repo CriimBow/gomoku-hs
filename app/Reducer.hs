@@ -325,33 +325,9 @@ distEmptyCellMap grille maxDist =
     addDist1 grid = Vec.imap (\i e -> e && not (checkNeighbour grid (mod i hGoGrid) (div i hGoGrid))) grid
     checkNeighbour :: GridBool -> Int -> Int -> Bool
     checkNeighbour grd x y =
-      checkPos grd (x + 1) y ||
-      checkPos grd x (y + 1) ||
-      checkPos grd x (y - 1) ||
-      checkPos grd (x - 1) y ||
-      checkPos grd (x + 1) (y + 1) ||
-      checkPos grd (x + 1) (y - 1) || checkPos grd (x - 1) (y + 1) || checkPos grd (x - 1) (y - 1)
+      checkPos grd (x + 1) y || checkPos grd x (y + 1) || checkPos grd x (y - 1) || checkPos grd (x - 1) y
     checkPos :: GridBool -> Int -> Int -> Bool
     checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
-
-moreThanOne :: Grid -> Coord -> Int -> (Int, Int) -> Int
-moreThanOne grid (cx, cy) count direction
-  | count > 1 = 2
-  | 0 > cx || 0 > cy = count
-  | (hGoGrid - 1) < cx || (hGoGrid - 1) < cy = count
-  | cellToChar EmptyCell == gridPiece = count
-  | otherwise = moreThanOne grid (sumTuples (cx, cy) direction) (count + 1) direction
-  where
-    gridPiece = grid Vec.! (cy * hGoGrid + cx)
-
-worthMoveIA :: Grid -> Coord -> Bool
-worthMoveIA grid move = True `elem` render
-  where
-    dirCouples = [(0, 5), (1, 4), (2, 3), (6, 7)]
-    removeCoordIA :: Grid -> Coord -> (Int, Int) -> Int
-    removeCoordIA grd mv direction = moreThanOne grd (sumTuples mv direction) 0 direction
-    sumDir = map (removeCoordIA grid move) allDir
-    render = [isTrue >= 2 | x <- dirCouples, let isTrue = (sumDir !! fst x) + (sumDir !! snd x)]
 
 -- /!\ no valide play if the map is Empty!
 validIACoords :: Grid -> Player -> Int -> GridBool
@@ -359,19 +335,6 @@ validIACoords grd p d =
   let empty = Vec.map (== cellToChar EmptyCell) grd
       grd_dist = distEmptyCellMap grd d
       emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-      optiMoves =
-        Vec.imap
-          (\idx e ->
-             let m = (mod idx hGoGrid, div idx hGoGrid)
-              in e && worthMoveIA grd m)
-          emptyAndDist
-      {-
-      moves =
-        if Vec.length (Vec.filter id optiMoves) > 8000
-          then optiMoves
-          else emptyAndDist
-      v = delDoubleThree grd p moves
-      -}
       v = delDoubleThree grd p emptyAndDist
    in v
 
@@ -408,26 +371,24 @@ moveScoring grid capWhite capBlack player move =
           else capBlack + newCap
       scoreCapture =
         if nbCap >= 10
-          then 1000000
-          else 50 * nbCap
+          then 10000
+          else 16 * newCap
       score = scoreCapture + foldl' transformToScore 0 sumSameDir
    in if player == PlayerWhite
         then (score, nbCap, capBlack)
         else (score, capWhite, nbCap)
   where
     countToScore count
-      | count == 0 = 0
-      | count == 1 = 1
-      | count == 2 = 10
-      | count == 3 = 300
-      | count == 4 = 1000
-      | otherwise = 1000000
+      | count == 3 = 9
+      | count == 4 = 20
+      | count >= 5 = 10000
+      | otherwise = 0
     transformToScore :: Int -> Int -> Int
     transformToScore precSco count = precSco + countToScore count
 
 nextMoves :: Grid -> Player -> [Coord]
 nextMoves grid player =
-  let moves = validCoordToList $ validIACoords grid player 1
+  let moves = validCoordToList $ validIACoords grid player 2
    in if null moves
         then validCoordToList $ validCoords grid player
         else moves
@@ -449,7 +410,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
           then a
           else let newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega =
-                     if prSc < 500000
+                     if prSc < 5000
                        then prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
                        else prSc
                    newAlpha = max a resNega
@@ -474,7 +435,7 @@ miniWrapper grid player capWhite capBlack =
           then (a, co)
           else let newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega =
-                     if prSc < 500000
+                     if prSc < 5000
                        then prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
                        else prSc
                 in if resNega > a
