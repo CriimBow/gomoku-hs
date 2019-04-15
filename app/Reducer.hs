@@ -436,7 +436,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 2 -- In reality depth = depth + 2
+  let depth = 5 -- In reality depth = depth + 2
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
