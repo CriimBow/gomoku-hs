@@ -329,15 +329,6 @@ distEmptyCellMap grille maxDist =
     checkPos :: GridBool -> Int -> Int -> Bool
     checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
 
--- /!\ no valide play if the map is Empty!
-validIACoords :: Grid -> Player -> Int -> GridBool
-validIACoords grd p d =
-  let empty = Vec.map (== cellToChar EmptyCell) grd
-      grd_dist = distEmptyCellMap grd d
-      emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-      v = delDoubleThree grd p emptyAndDist
-   in v
-
 sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
 sumTuples (a1, a2) (b1, b2) = (a1 + b1, a2 + b2)
 
@@ -386,12 +377,27 @@ moveScoring grid capWhite capBlack player move =
     transformToScore :: Int -> Int -> Int
     transformToScore precSco count = precSco + countToScore count
 
+-- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> Player -> [Coord]
-nextMoves grid player =
-  let moves = validCoordToList $ validIACoords grid player 2
-   in if null moves
-        then validCoordToList $ validCoords grid player
-        else moves
+nextMoves grid player = validCoordToList $ validIACoords grid player 2
+  where
+    validIACoords :: Grid -> Player -> Int -> GridBool
+    validIACoords grd p d =
+      let empty = Vec.map (== cellToChar EmptyCell) grd
+          grd_dist = distEmptyCellMap grd d
+          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
+       in emptyAndDist
+
+nextMovesFirst :: Grid -> Player -> [Coord]
+nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 2
+  where
+    validIACoordsFirst :: Grid -> Player -> Int -> GridBool
+    validIACoordsFirst grd p d =
+      let empty = Vec.map (== cellToChar EmptyCell) grd
+          grd_dist = distEmptyCellMap grd d
+          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
+          v = delDoubleThree grd p emptyAndDist
+       in v
 
 compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
 compF (_, (s1, _, _)) (_, (s2, _, _))
@@ -428,7 +434,7 @@ miniWrapper grid player capWhite capBlack =
   let depth = 2 -- In reality depth = depth + 2
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
-      moves = nextMoves grid player
+      moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
