@@ -375,6 +375,7 @@ moveScoring grid capWhite capBlack player move =
         else (score, capWhite, nbCap)
   where
     countToScore count
+      | count == 2 = 1
       | count == 3 = 9
       | count == 4 = 20
       | count >= 5 = 10000
@@ -393,17 +394,6 @@ nextMoves grid player = validCoordToList $ validIACoords grid player 1
           emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
        in emptyAndDist
 
-nextMovesFirst :: Grid -> Player -> [Coord]
-nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 1
-  where
-    validIACoordsFirst :: Grid -> Player -> Int -> GridBool
-    validIACoordsFirst grd p d =
-      let empty = Vec.map (== cellToChar EmptyCell) grd
-          grd_dist = distEmptyCellMap grd d
-          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
-          v = delDoubleThree grd p emptyAndDist
-       in v
-
 compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
 compF (_, (s1, _, _)) (_, (s2, _, _))
   | s1 > s2 = LT
@@ -417,7 +407,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       (_, (_, _, scoreMax)) = head movesSort
-      movesSortBest = take 5 movesSort
+      movesSortBest = take 17 movesSort
       abPruning a ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then a
@@ -434,17 +424,27 @@ negaMax grid player depth alpha beta capWhite capBlack =
           else maximum $ map (\(_, (s, _, _)) -> s) movesSortBest
    in res
 
+-- Wrapper
+nextMovesFirst :: Grid -> Player -> [Coord]
+nextMovesFirst grid player = validCoordToList $ validIACoordsFirst grid player 2
+  where
+    validIACoordsFirst :: Grid -> Player -> Int -> GridBool
+    validIACoordsFirst grd p d =
+      let empty = Vec.map (== cellToChar EmptyCell) grd
+          grd_dist = distEmptyCellMap grd d
+          emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
+          v = delDoubleThree grd p emptyAndDist
+       in v
+
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 5 -- In reality depth = depth + 2
+  let depth = 4 -- In reality depth = depth + 2
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      (_, (_, _, scoreMax)) = head movesSort
-      movesSortBest = take 5 movesSort
       abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
         if a >= beta
           then (a, co)
@@ -456,5 +456,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (-1, -1)) movesSortBest
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 17 movesSort
    in bestMove
