@@ -338,24 +338,14 @@ distEmptyCellMap grille maxDist =
     checkPos :: GridBool -> Int -> Int -> Bool
     checkPos gd x y = x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && not (gd Vec.! (y * hGoGrid + x))
 
-sumTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
-sumTuples (a1, a2) (b1, b2) = (a1 + b1, a2 + b2)
-
-------------
--- SOLVER --
-------------
-solver :: Grid -> Player -> Int -> Int -> Coord
-solver = miniWrapper
-
+-- Socring Ordoring
 countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in if c + c' <= 2
-        then c + c'
-        else if be || be'
-               then c + c'
-               else c + c' + 1
+   in if be || be'
+        then c + c' + 1
+        else c + c' + 2
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -383,30 +373,25 @@ moveScoringCap grid capWhite capBlack player move =
           else capBlack + newCap
       scoreCapture =
         if nbCap >= 10
-          then 10000
+          then scoreEndGame
           else 30 * newCap
    in if player == PlayerWhite
         then (scoreCapture, nbCap, capBlack)
         else (scoreCapture, capWhite, nbCap)
 
-filterLimit :: Int
-filterLimit = 101
-
-cutNegaMax :: Int
-cutNegaMax = 5000
-
 countToScorePlayer :: Int -> Int
 countToScorePlayer count
   | count == 2 = 10
   | count == 3 = 100
-  | count >= 4 = 10000
+  | count == 4 = 1000
+  | count == 5 = scoreEndGame
   | otherwise = 0
 
 countToScoreOponnent :: Int -> Int
 countToScoreOponnent count
-  | count == 1 = 10
   | count == 2 = 100
-  | count >= 3 = 10000
+  | count == 3 = 1000
+  | count == 4 = scoreEndGame
   | otherwise = 0
 
 scoringOrdoring :: Grid -> Int -> Int -> Player -> Coord -> Int
@@ -414,14 +399,16 @@ scoringOrdoring grid capWhite capBlack player move =
   let sp = moveScoringAlign grid player move countToScorePlayer
       (sc, _, _) = moveScoringCap grid capWhite capBlack player move
       so = moveScoringAlign grid (nextPlayer player) move countToScoreOponnent
-   in sp + so + sc
+      (sco, _, _) = moveScoringCap grid capWhite capBlack (nextPlayer player) move
+   in sp + so + sc + sco
 
 -- Scoring End
 countToScoreEnd :: Int -> Int
 countToScoreEnd count
-  | count == 2 = 9
-  | count == 3 = 20
-  | count >= 4 = 10000
+  | count == 2 = 10
+  | count == 3 = 100
+  | count == 4 = 1000
+  | count == 5 = scoreEndGame
   | otherwise = 0
 
 scoreAlignY :: Grid -> Player -> Int
@@ -434,9 +421,7 @@ scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               (\(sAcc, cur) j ->
                  if grid Vec.! (i + j * hGoGrid) == playerToChar player
                    then (sAcc, cur + 1)
-                   else if grid Vec.! (i + j * hGoGrid) == cellToChar EmptyCell
-                          then (sAcc + countToScorePlayer cur, 0)
-                          else (sAcc + countToScorePlayer (cur - 1), 0))
+                   else (sAcc + countToScorePlayer cur, 0))
               (0, 0)
               [0 .. hGoGrid - 1]
        in s + countToScorePlayer c
@@ -472,17 +457,32 @@ scoringEnd :: Grid -> Int -> Int -> Player -> Int
 scoringEnd grid capWhite capBlack player =
   let scoreCapBlack =
         if capBlack >= 10
-          then 10000
+          then scoreEndGame
           else capBlack * 30
       scoreCapWhite =
         if capWhite >= 10
-          then 10000
+          then scoreEndGame
           else capWhite * 30
       scoreAlignBlack = scoreAlign grid PlayerBlack
       scoreAlignWhite = scoreAlign grid PlayerWhite
    in if player == PlayerWhite
         then scoreCapWhite + scoreAlignWhite - scoreCapBlack - scoreAlignBlack
         else scoreCapBlack + scoreAlignBlack - scoreCapWhite - scoreAlignWhite
+
+------------
+-- SOLVER --
+------------
+solver :: Grid -> Player -> Int -> Int -> Coord
+solver = miniWrapper
+
+filterLimit :: Int
+filterLimit = 50000
+
+scoreEndGame :: Int
+scoreEndGame = 1000000
+
+cutNegaMax :: Int
+cutNegaMax = div scoreEndGame 2
 
 -- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> [Coord]
