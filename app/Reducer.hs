@@ -356,25 +356,18 @@ countDir grid player (cx, cy) (dx, dy) =
             then (True, nb + 1)
             else (False, nb)
 
-
-moveScoringDouble :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
-moveScoringDouble grid capWhite capBlack player move =
- let (s, nw,nb) = moveScoringTerm grid capWhite capBlack player move
-     newGrid = posePieceAndDelete move player grid
- in if s > 5000
-    then (s, nw,nb)
-    else (s - maxScoringGrid newGrid nw nb (nextPlayer player), nw, nb)
-
-maxScoringGrid ::Grid -> Int -> Int -> Player -> Int
-maxScoringGrid grid capWhite capBlack player = maximum $
-  map (\(s, _, _) -> s) $
-    map (\c -> moveScoringTerm grid capWhite capBlack player c) $
-      nextMoves grid
-
-moveScoringTerm :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
-moveScoringTerm grid capWhite capBlack player move =
+moveScoringAlign :: Grid -> Int -> Int -> Player -> Coord -> (Int -> Int) -> Int
+moveScoringAlign grid capWhite capBlack player move countScore =
   let countedDir = map (countDir grid player move) allDir
       sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
+      score = foldl' (\p c -> p + countScore c) 0 sumSameDir
+  in if player == PlayerWhite
+      then score
+      else score
+
+moveScoringCap :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+moveScoringCap grid capWhite capBlack player move =
+  let
       newCap = 2 * Vb.length (checkCapturToSup player move grid)
       nbCap =
         if player == PlayerWhite
@@ -384,18 +377,39 @@ moveScoringTerm grid capWhite capBlack player move =
         if nbCap >= 10
           then 10000
           else 16 * newCap
-      score = scoreCapture + foldl' (\p c -> p + countToScore c) 0 sumSameDir
   in if player == PlayerWhite
-      then (score, nbCap, capBlack)
-      else (score, capWhite, nbCap)
+      then (scoreCapture, nbCap, capBlack)
+      else (scoreCapture, capWhite, nbCap)
 
-countToScore :: Int -> Int
-countToScore count
+countToScorePlayer :: Int -> Int
+countToScorePlayer count
   | count == 2 = 1
   | count == 3 = 9
   | count == 4 = 20
   | count >= 5 = 10000
   | otherwise = 0
+
+countToScoreOponnent :: Int -> Int
+countToScoreOponnent count
+  | count == 2 = 8
+  | count == 3 = 19
+  | count >= 4 = 10000
+  | otherwise = 0
+
+scoringOrdoring :: Grid -> Int -> Int -> Player -> Coord -> Int
+scoringOrdoring grid capWhite capBlack player move =
+ let
+    sp = moveScoringAlign grid capWhite capBlack player move countToScorePlayer
+    (sc, _, _) = moveScoringCap grid capWhite capBlack player move
+    so = moveScoringAlign grid capWhite capBlack player move countToScoreOponnent
+ in sp + so + sc
+
+scoringNegaMax :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
+scoringNegaMax grid capWhite capBlack player move =
+ let
+    sp = moveScoringAlign grid capWhite capBlack player move countToScorePlayer
+    (sc, nw, nb) = moveScoringCap grid capWhite capBlack player move
+ in (sc + sp, nw, nb)
 
 -- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> [Coord]
@@ -408,8 +422,8 @@ validIACoords grd d =
       emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
   in emptyAndDist
 
-compF :: (Coord, (Int, Int, Int)) -> (Coord, (Int, Int, Int)) -> Ordering
-compF (_, (s1, _, _)) (_, (s2, _, _))
+compF :: (Coord, Int) -> (Coord, Int) -> Ordering
+compF (_, s1) (_, s2)
   | s1 > s2 = LT
   | s1 < s2 = GT
   | otherwise = EQ
@@ -417,14 +431,15 @@ compF (_, (s1, _, _)) (_, (s2, _, _))
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
   let moves = nextMoves grid
-      nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
-      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoringDouble grid capWhite capBlack player (cx, cy))) moves
+      nxtMovesAndScore :: [(Coord, Int)]
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      movesSortBest = take 9 movesSort
-      abPruning a ((cx, cy), (prSc, nW, nB)) =
+      movesSortBest = map (\(c, _) -> c) $take 9 movesSort
+      abPruning a (cx, cy) =
         if a >= beta
           then a
-          else let newGrid = posePieceAndDelete (cx, cy) player grid
+          else let (prSc, nW, nB) = scoringNegaMax grid capWhite capBlack player (cx, cy)
+                   newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega =
                      if prSc < 5000
                        then prSc - negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
@@ -434,7 +449,9 @@ negaMax grid player depth alpha beta capWhite capBlack =
       res =
         if depth > 0
           then foldl' abPruning alpha movesSortBest
-          else maximum $ map (\(_, (s, _, _)) -> s) movesSortBest
+          else let (c, _) = head movesSort
+                   (s, _, _) = scoringNegaMax grid capWhite capBlack player c
+               in s
    in res
 
 -- Wrapper
@@ -455,13 +472,14 @@ miniWrapper grid player capWhite capBlack =
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
-      nxtMovesAndScore :: [(Coord, (Int, Int, Int))]
-      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), moveScoringDouble grid capWhite capBlack player (cx, cy))) moves
+      nxtMovesAndScore :: [(Coord, Int)]
+      nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      abPruning (a, co) ((cx, cy), (prSc, nW, nB)) =
+      abPruning (a, co) (cx, cy) =
         if a >= beta
           then (a, co)
-          else let newGrid = posePieceAndDelete (cx, cy) player grid
+          else let (prSc, nW, nB) = scoringNegaMax grid capWhite capBlack player (cx, cy)
+                   newGrid = posePieceAndDelete (cx, cy) player grid
                    resNega =
                      if prSc < 5000
                        then prSc - negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
@@ -469,5 +487,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 17 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) $ take 17 movesSort
    in bestMove
