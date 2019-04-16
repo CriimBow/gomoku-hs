@@ -468,7 +468,7 @@ validIACoordsFirst grd p d =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 2 -- In reality depth = depth + 3
+  let depth = 5 -- In reality depth = depth + 1
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
@@ -487,5 +487,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) $ take 17 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) $ take 9 movesSort
    in bestMove
