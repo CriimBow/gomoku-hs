@@ -27,7 +27,7 @@ data AppState
               , end :: Maybe (Maybe Player) -- Maybe contain player win or Nothing if match null
               , nbPieceCapPWhite :: Int -- nombre de piece capture by player white
               , nbPieceCapPBlack :: Int -- nombre de piece capture by player black
-               }
+              , nbTurn :: Int }
   | Home GameMode
   | SoloSelectPlayer Player
   deriving (Eq, Show)
@@ -84,6 +84,10 @@ initGameState mode =
         , end = Nothing
         , nbPieceCapPBlack = 0
         , nbPieceCapPWhite = 0
+        , nbTurn =
+            case mode of
+              GameSolo PlayerBlack -> 3
+              _ -> 2
         }
 
 -- UPDATE STATE
@@ -108,7 +112,7 @@ handelPlayCoord cr s =
     Nothing ->
       if validCoord (goGrid s) (playerTurn s) cr
         then let nwS = checkEnd cr $ checkCaptur cr $ s {goGrid = posePiece cr (playerTurn s) (goGrid s)}
-              in nwS {playerTurn = nextPlayer (playerTurn s)}
+              in nwS {playerTurn = nextPlayer (playerTurn nwS), nbTurn = 1 + nbTurn nwS}
         else s
     _ -> s
 

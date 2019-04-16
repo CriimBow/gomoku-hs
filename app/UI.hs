@@ -51,6 +51,7 @@ drawGame R.GameState { R.goGrid = grd
                      , R.end = end
                      , R.nbPieceCapPBlack = nPCB
                      , R.nbPieceCapPWhite = nPCW
+                     , R.nbTurn = nbTurn
                      } = hBox [padLeftRight 2 wInfo, padAll 2 wGoBoard, padLeftRight 2 wCmd]
     -- CMD
   where
@@ -74,6 +75,7 @@ drawGame R.GameState { R.goGrid = grd
       padTop (Pad 5) $
       vBox
         ([padAll 1 $ vBox [str $ printf "Nb piece cap black: %d" nPCB, str $ printf "Nb piece cap white: %d" nPCW]] ++
+         [padAll 1 $ str $ printf "Tour N %d" (div nbTurn 2)] ++
          [padAll 1 $ vBox endMsg] ++ [padAll 1 $ vBox [str "Time of last computation:", str $ printf "%f ms" lstTimCmp]])
     endMsg =
       case end of
