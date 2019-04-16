@@ -385,14 +385,14 @@ moveScoringCap grid capWhite capBlack player move =
 countToScorePlayer :: Int -> Int
 countToScorePlayer count
   | count == 3 = 9
-  | count == 4 = 200
+  | count == 4 = 20
   | count >= 5 = 10000
   | otherwise = 0
 
 countToScoreOponnent :: Int -> Int
 countToScoreOponnent count
   | count == 2 = 8
-  | count == 3 = 190
+  | count == 3 = 19
   | count >= 4 = 10000
   | otherwise = 0
 
@@ -434,6 +434,8 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
+      (_, sMax) = head movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 10) movesSort
       abPruning a (cr, so) =
         if a >= beta
           then a
@@ -454,9 +456,9 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesSort
+          then foldl' abPruning alpha movesFilter
           else maximum $
-               map (\(s, _, _) -> s) $ map (\(c, _) -> scoringNegaMax grid capWhite capBlack player c) movesSort
+               map (\(s, _, _) -> s) $ map (\(c, _) -> scoringNegaMax grid capWhite capBlack player c) movesFilter
    in res
 
 -- Wrapper
@@ -480,6 +482,8 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
+      (_, sMax) = head movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 10) movesSort
       abPruning (a, co) (cr, so) =
         if a >= beta
           then (a, co)
@@ -499,5 +503,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesFilter
    in bestMove
