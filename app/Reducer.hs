@@ -440,15 +440,15 @@ scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               [0 .. hGoGrid - 1]
        in s + countToScore c
 
-scoreAlign2 :: Grid -> Player -> Int
-scoreAlign2 grid player = 0
+scoreAlignDiag2 :: Grid -> Player -> Int
+scoreAlignDiag2 grid player = 0
 
-scoreAlign1 :: Grid -> Player -> Int
-scoreAlign1 grid player = 0
+scoreAlignDiag1 :: Grid -> Player -> Int
+scoreAlignDiag1 grid player = 0
 
 scoreAlign :: Grid -> Player -> Int
 scoreAlign grid player =
-  scoreAlign1 grid player + scoreAlign2 grid player + scoreAlignX grid player + scoreAlignY grid player
+  scoreAlignDiag1 grid player + scoreAlignDiag2 grid player + scoreAlignX grid player + scoreAlignY grid player
 
 scoringEnd :: Grid -> Int -> Int -> Player -> Int
 scoringEnd grid capWhite capBlack player =
