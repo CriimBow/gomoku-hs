@@ -403,9 +403,25 @@ scoringOrdoring grid capWhite capBlack player move =
       so = moveScoringAlign grid (nextPlayer player) move countToScoreOponnent
    in sp + so + sc
 
+scoreAlign :: Grid -> Player -> Int
+scoreAlign grid player = 0
+
 -- Scoring End
 scoringEnd :: Grid -> Int -> Int -> Player -> Int
-scoringEnd grid capWhite capBlack player = 0
+scoringEnd grid capWhite capBlack player =
+  let scoreCapBlack =
+        if capBlack >= 10
+          then 10000
+          else capBlack * 7
+      scoreCapWhite =
+        if capWhite >= 10
+          then 10000
+          else capWhite * 7
+      scoreAlignBlack = scoreAlign grid PlayerBlack
+      scoreAlignWhite = scoreAlign grid PlayerWhite
+   in if player == PlayerWhite
+        then scoreCapWhite + scoreAlignWhite - scoreCapBlack - scoreAlignBlack
+        else scoreCapBlack + scoreAlignBlack - scoreCapWhite - scoreAlignWhite
 
 -- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> [Coord]
@@ -471,7 +487,7 @@ validIACoordsFirst grd p d =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 4 -- In reality depth = depth + 1
+  let depth = 4 -- real depth = depth + 1
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
