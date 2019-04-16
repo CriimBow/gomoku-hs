@@ -351,9 +351,11 @@ countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in if be || be'
-        then c + c' - 1
-        else c + c'
+   in if c + c' <= 2
+        then c + c'
+        else if be || be'
+               then c + c' - 1
+               else c + c'
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -389,16 +391,16 @@ moveScoringCap grid capWhite capBlack player move =
 
 countToScorePlayer :: Int -> Int
 countToScorePlayer count
-  | count == 3 = 9
-  | count == 4 = 20
-  | count >= 5 = 10000
+  | count == 2 = 9
+  | count == 3 = 20
+  | count >= 4 = 10000
   | otherwise = 0
 
 countToScoreOponnent :: Int -> Int
 countToScoreOponnent count
-  | count == 2 = 9
-  | count == 3 = 20
-  | count >= 4 = 10000
+  | count == 1 = 9
+  | count == 2 = 20
+  | count >= 3 = 10000
   | otherwise = 0
 
 scoringOrdoring :: Grid -> Int -> Int -> Player -> Coord -> Int
@@ -407,6 +409,14 @@ scoringOrdoring grid capWhite capBlack player move =
       (sc, _, _) = moveScoringCap grid capWhite capBlack player move
       so = moveScoringAlign grid (nextPlayer player) move countToScoreOponnent
    in sp + so + sc
+
+-- Scoring End
+countToScoreEnd :: Int -> Int
+countToScoreEnd count
+  | count == 2 = 9
+  | count == 3 = 20
+  | count >= 4 = 10000
+  | otherwise = 0
 
 scoreAlignY :: Grid -> Player -> Int
 scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
@@ -418,7 +428,9 @@ scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               (\(sAcc, cur) j ->
                  if grid Vec.! (i + j * hGoGrid) == playerToChar player
                    then (sAcc, cur + 1)
-                   else (sAcc + countToScorePlayer cur, 0))
+                   else if grid Vec.! (j + i * hGoGrid) == cellToChar EmptyCell
+                          then (sAcc + countToScorePlayer cur, 0)
+                          else (sAcc + countToScorePlayer (cur - 1), 0))
               (0, 0)
               [0 .. hGoGrid - 1]
        in s + countToScorePlayer c
@@ -433,10 +445,12 @@ scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               (\(sAcc, cur) j ->
                  if grid Vec.! (j + i * hGoGrid) == playerToChar player
                    then (sAcc, cur + 1)
-                   else (sAcc + countToScorePlayer cur, 0))
+                   else if grid Vec.! (j + i * hGoGrid) == cellToChar EmptyCell
+                          then (sAcc + countToScorePlayer cur, 0)
+                          else (sAcc + countToScorePlayer (cur - 1), 0))
               (0, 0)
               [0 .. hGoGrid - 1]
-       in s + countToScorePlayer c
+       in s + countToScorePlayer (c - 1)
 
 scoreAlign2 :: Grid -> Player -> Int
 scoreAlign2 grid player = 0
@@ -448,17 +462,16 @@ scoreAlign :: Grid -> Player -> Int
 scoreAlign grid player =
   scoreAlign1 grid player + scoreAlign2 grid player + scoreAlignX grid player + scoreAlignY grid player
 
--- Scoring End
 scoringEnd :: Grid -> Int -> Int -> Player -> Int
 scoringEnd grid capWhite capBlack player =
   let scoreCapBlack =
         if capBlack >= 10
           then 10000
-          else capBlack * 15
+          else capBlack * 30
       scoreCapWhite =
         if capWhite >= 10
           then 10000
-          else capWhite * 15
+          else capWhite * 30
       scoreAlignBlack = scoreAlign grid PlayerBlack
       scoreAlignWhite = scoreAlign grid PlayerWhite
    in if player == PlayerWhite
@@ -490,7 +503,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
       (_, sMax) = head movesSort
-      movesFilter = filter (\(_, s) -> s >= sMax - 42) movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 30) movesSort
       abPruning a (cr, so) =
         if a >= beta
           then a
@@ -537,7 +550,7 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       (_, sMax) = head movesSort
-      movesFilter = filter (\(_, s) -> s >= sMax - 42) movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 30) movesSort
       abPruning (a, co) (cr, so) =
         if a >= beta
           then (a, co)
