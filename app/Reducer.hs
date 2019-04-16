@@ -348,23 +348,28 @@ solver :: Grid -> Player -> Int -> Int -> Coord
 solver = miniWrapper
 
 countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
-countDir grid player (cx, cy) (dx, dy) =
-  let (_, nb) = foldl' sumDist (True, 0) [1 .. 4]
-   in nb
-  where
-    sumDist (b, nb) d =
-      let (cx', cy') = (cx + d * dx, cy + d * dy)
-       in if b &&
-             0 <= cx' &&
-             0 <= cy' && hGoGrid > cx' && hGoGrid > cy' && grid Vec.! (cy' * hGoGrid + cx') == playerToChar player
-            then (True, nb + 1)
-            else (False, nb)
+countDir grid player cr (dx, dy) =
+  let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
+      (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
+   in if be || be'
+        then c + c' - 1
+        else c + c'
+
+sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
+sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
+  let (cx', cy') = (cx + d * dx, cy + d * dy)
+   in if b && 0 <= cx' && 0 <= cy' && hGoGrid > cx' && hGoGrid > cy'
+        then if grid Vec.! (cy' * hGoGrid + cx') /= playerToChar player
+               then if grid Vec.! (cy' * hGoGrid + cx') == cellToChar EmptyCell
+                      then (False, nb, False)
+                      else (False, nb, True)
+               else (True, nb + 1, False)
+        else (False, nb, True)
 
 moveScoringAlign :: Grid -> Player -> Coord -> (Int -> Int) -> Int
 moveScoringAlign grid player move countScore =
-  let countedDir = map (countDir grid player move) allDir
-      sumSameDir = map (\(c1, c2) -> (countedDir !! c1) + (countedDir !! c2) + 1) [(0, 5), (1, 4), (2, 3), (6, 7)]
-      score = foldl' (\p c -> p + countScore c) 0 sumSameDir
+  let countedDir = map (countDir grid player move) [(0, 1), (1, 0), (1, 1), (1, -1)]
+      score = foldl' (\p c -> p + countScore c) 0 countedDir
    in score
 
 moveScoringCap :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
@@ -391,8 +396,8 @@ countToScorePlayer count
 
 countToScoreOponnent :: Int -> Int
 countToScoreOponnent count
-  | count == 2 = 8
-  | count == 3 = 19
+  | count == 2 = 9
+  | count == 3 = 20
   | count >= 4 = 10000
   | otherwise = 0
 
@@ -403,8 +408,45 @@ scoringOrdoring grid capWhite capBlack player move =
       so = moveScoringAlign grid (nextPlayer player) move countToScoreOponnent
    in sp + so + sc
 
+scoreAlignY :: Grid -> Player -> Int
+scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
+  where
+    scoreLine :: Grid -> Player -> Int -> Int
+    scoreLine grd p i =
+      let (s, c) =
+            foldl'
+              (\(sAcc, cur) j ->
+                 if grid Vec.! (i + j * hGoGrid) == playerToChar player
+                   then (sAcc, cur + 1)
+                   else (sAcc + countToScorePlayer cur, 0))
+              (0, 0)
+              [0 .. hGoGrid - 1]
+       in s + countToScorePlayer c
+
+scoreAlignX :: Grid -> Player -> Int
+scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
+  where
+    scoreLine :: Grid -> Player -> Int -> Int
+    scoreLine grd p i =
+      let (s, c) =
+            foldl'
+              (\(sAcc, cur) j ->
+                 if grid Vec.! (j + i * hGoGrid) == playerToChar player
+                   then (sAcc, cur + 1)
+                   else (sAcc + countToScorePlayer cur, 0))
+              (0, 0)
+              [0 .. hGoGrid - 1]
+       in s + countToScorePlayer c
+
+scoreAlign2 :: Grid -> Player -> Int
+scoreAlign2 grid player = 0
+
+scoreAlign1 :: Grid -> Player -> Int
+scoreAlign1 grid player = 0
+
 scoreAlign :: Grid -> Player -> Int
-scoreAlign grid player = 0
+scoreAlign grid player =
+  scoreAlign1 grid player + scoreAlign2 grid player + scoreAlignX grid player + scoreAlignY grid player
 
 -- Scoring End
 scoringEnd :: Grid -> Int -> Int -> Player -> Int
@@ -412,11 +454,11 @@ scoringEnd grid capWhite capBlack player =
   let scoreCapBlack =
         if capBlack >= 10
           then 10000
-          else capBlack * 7
+          else capBlack * 15
       scoreCapWhite =
         if capWhite >= 10
           then 10000
-          else capWhite * 7
+          else capWhite * 15
       scoreAlignBlack = scoreAlign grid PlayerBlack
       scoreAlignWhite = scoreAlign grid PlayerWhite
    in if player == PlayerWhite
@@ -448,7 +490,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
       (_, sMax) = head movesSort
-      movesFilter = filter (\(_, s) -> s >= sMax - 10) movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 42) movesSort
       abPruning a (cr, so) =
         if a >= beta
           then a
@@ -487,7 +529,7 @@ validIACoordsFirst grd p d =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 4 -- real depth = depth + 1
+  let depth = 5
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
@@ -495,7 +537,7 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
       (_, sMax) = head movesSort
-      movesFilter = filter (\(_, s) -> s >= sMax - 10) movesSort
+      movesFilter = filter (\(_, s) -> s >= sMax - 42) movesSort
       abPruning (a, co) (cr, so) =
         if a >= beta
           then (a, co)
@@ -510,7 +552,7 @@ miniWrapper grid player capWhite capBlack =
                        else capBlack
                    resNega =
                      if so < 5000
-                       then negate $ negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
+                       then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
                        else so
                 in if resNega > a
                      then (resNega, cr)
