@@ -121,14 +121,14 @@ posePiece (cx, cy) p grid = Vec.imap putPiece grid
         then playerToChar p
         else c
 
-posePieceAndDelete :: Coord -> Player -> Grid -> Grid
+posePieceAndDelete :: Coord -> Player -> Grid -> (Grid, Int)
 posePieceAndDelete cr p grd =
   let withPiece :: Grid
       withPiece = posePiece cr p grd
       toSup :: Vb.Vector (Vb.Vector (Int, Int, Player))
       toSup = checkCapturToSup p cr withPiece
       newGrd = supPosGrid withPiece toSup
-   in newGrd
+   in (newGrd, 2 * Vb.length toSup)
 
 checkCaptur :: Coord -> AppState -> AppState
 checkCaptur cr s =
@@ -380,7 +380,6 @@ moveScoringCap grid capWhite capBlack player move =
 
 countToScorePlayer :: Int -> Int
 countToScorePlayer count
-  | count == 2 = -1
   | count == 3 = 9
   | count == 4 = 20
   | count >= 5 = 10000
@@ -430,24 +429,29 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
-      movesSortBest :: [Coord]
-      movesSortBest = map (\(c, _) -> c) movesSort
-      abPruning a (cx, cy) =
+      abPruning a (cr, so) =
         if a >= beta
           then a
-          else let (prSc, nW, nB) = scoringNegaMax grid capWhite capBlack player (cx, cy)
-                   newGrid = posePieceAndDelete (cx, cy) player grid
+          else let (newGrid, nbDel) = posePieceAndDelete cr player grid
+                   nW =
+                     if player == PlayerWhite
+                       then capWhite + nbDel
+                       else capWhite
+                   nB =
+                     if player == PlayerBlack
+                       then capBlack + nbDel
+                       else capBlack
                    resNega =
-                     if prSc < 5000
+                     if so < 5000
                        then -negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
-                       else prSc
+                       else so
                    newAlpha = max a resNega
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesSortBest
+          then foldl' abPruning alpha movesSort
           else maximum $
-               map (\(s, _, _) -> s) $ map (\c -> scoringNegaMax grid capWhite capBlack player c) movesSortBest
+               map (\(s, _, _) -> s) $ map (\(c, _) -> scoringNegaMax grid capWhite capBlack player c) movesSort
    in res
 
 -- Wrapper
@@ -471,17 +475,24 @@ miniWrapper grid player capWhite capBlack =
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      abPruning (a, co) (cx, cy) =
+      abPruning (a, co) (cr, so) =
         if a >= beta
           then (a, co)
-          else let (prSc, nW, nB) = scoringNegaMax grid capWhite capBlack player (cx, cy)
-                   newGrid = posePieceAndDelete (cx, cy) player grid
+          else let (newGrid, nbDel) = posePieceAndDelete cr player grid
+                   nW =
+                     if player == PlayerWhite
+                       then capWhite + nbDel
+                       else capWhite
+                   nB =
+                     if player == PlayerBlack
+                       then capBlack + nbDel
+                       else capBlack
                    resNega =
-                     if prSc < 5000
+                     if so < 5000
                        then -negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
-                       else prSc
+                       else so
                 in if resNega > a
-                     then (resNega, (cx, cy))
+                     then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesSort
    in bestMove
