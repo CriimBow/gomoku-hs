@@ -347,7 +347,7 @@ countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in c + c' + (boolToInt (be && be'))
+   in c + c' + boolToInt (be && be')
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -363,7 +363,7 @@ sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
 moveScoringAlign :: Grid -> Player -> Coord -> Int
 moveScoringAlign grid player move =
   let countedDir = map (countDir grid player move) [(0, 1), (1, 0), (1, 1), (1, -1)]
-      score = foldl' (\p c -> p + countToScorePlayer c) 0 countedDir
+      score = foldl' (\p c -> p + countToScore c) 0 countedDir
    in score
 
 moveScoringCap :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
@@ -381,8 +381,8 @@ moveScoringCap grid capWhite capBlack player move =
         then (scoreCapture, nbCap, capBlack)
         else (scoreCapture, capWhite, nbCap)
 
-countToScorePlayer :: Int -> Int
-countToScorePlayer count
+countToScore :: Int -> Int
+countToScore count
   | count == 2 = 10
   | count == 3 = 100
   | count == 4 = 1000
@@ -408,10 +408,10 @@ scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               (\(sAcc, cur) j ->
                  if grid Vec.! (i + j * hGoGrid) == playerToChar player
                    then (sAcc, cur + 1)
-                   else (sAcc + countToScorePlayer cur, 0))
+                   else (sAcc + countToScore cur, 0))
               (0, 0)
               [0 .. hGoGrid - 1]
-       in s + countToScorePlayer c
+       in s + countToScore c
 
 scoreAlignX :: Grid -> Player -> Int
 scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
@@ -423,12 +423,10 @@ scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGr
               (\(sAcc, cur) j ->
                  if grid Vec.! (j + i * hGoGrid) == playerToChar player
                    then (sAcc, cur + 1)
-                   else if grid Vec.! (j + i * hGoGrid) == cellToChar EmptyCell
-                          then (sAcc + countToScorePlayer cur, 0)
-                          else (sAcc + countToScorePlayer (cur - 1), 0))
+                   else (sAcc + countToScore cur, 0))
               (0, 0)
               [0 .. hGoGrid - 1]
-       in s + countToScorePlayer (c - 1)
+       in s + countToScore c
 
 scoreAlign2 :: Grid -> Player -> Int
 scoreAlign2 grid player = 0
