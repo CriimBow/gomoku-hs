@@ -3,6 +3,7 @@ module Event where
 import Brick (BrickEvent(..), EventM, Next, continue, halt)
 import Control.Monad.IO.Class (liftIO)
 import Name (Name)
+import Data.Maybe (isNothing)
 
 import qualified Graphics.Vty as V
 import qualified Reducer as R
@@ -47,7 +48,7 @@ handleEvent g (VtyEvent (V.EvKey V.KEnter [])) =
         else let nextG = R.handelPlayCoord (R.cursor g) (g {R.cursorSuggestion = Nothing})
               in case (R.gameMode g) of
                    R.GameMulti -> continue nextG
-                   R.GameSolo _ -> liftIO (R.handelIAPlay nextG) >>= continue
+                   R.GameSolo _ -> if isNothing (R.end g) then liftIO (R.handelIAPlay nextG) >>= continue else continue nextG
     R.Home mode ->
       case mode of
         R.GameSolo _ -> continue $ R.SoloSelectPlayer R.PlayerWhite

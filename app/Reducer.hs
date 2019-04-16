@@ -533,8 +533,8 @@ validIACoordsFirst grd p d =
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
   let depth = 5
-      alpha = negate cutNegaMax
-      beta = cutNegaMax
+      alpha = div (minBound :: Int) 8
+      beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
