@@ -376,10 +376,22 @@ moveScoringCap grid capWhite capBlack player move =
       scoreCapture =
         if nbCap >= 10
           then scoreEndGame
-          else 30 * newCap
+          else scoreCap * newCap
    in if player == PlayerWhite
         then (scoreCapture, nbCap, capBlack)
         else (scoreCapture, capWhite, nbCap)
+
+filterLimit :: Int
+filterLimit = 50000
+
+scoreEndGame :: Int
+scoreEndGame = 1000000
+
+cutNegaMax :: Int
+cutNegaMax = div scoreEndGame 2
+
+scoreCap :: Int
+scoreCap = 55
 
 countToScore :: Int -> Int
 countToScore count
@@ -443,11 +455,11 @@ scoringEnd grid capWhite capBlack player =
   let scoreCapBlack =
         if capBlack >= 10
           then scoreEndGame
-          else capBlack * 30
+          else capBlack * scoreCap
       scoreCapWhite =
         if capWhite >= 10
           then scoreEndGame
-          else capWhite * 30
+          else capWhite * scoreCap
       scoreAlignBlack = scoreAlign grid PlayerBlack
       scoreAlignWhite = scoreAlign grid PlayerWhite
    in if player == PlayerWhite
@@ -457,15 +469,6 @@ scoringEnd grid capWhite capBlack player =
 -- SOLVER
 solver :: Grid -> Player -> Int -> Int -> Coord
 solver = miniWrapper
-
-filterLimit :: Int
-filterLimit = 50000
-
-scoreEndGame :: Int
-scoreEndGame = 1000000
-
-cutNegaMax :: Int
-cutNegaMax = div scoreEndGame 2
 
 -- /!\ no valide play if the map is Empty!
 nextMoves :: Grid -> [Coord]
