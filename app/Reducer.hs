@@ -450,7 +450,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                        else capBlack
                    resNega =
                      if so < 5000
-                       then -negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
+                       then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
                        else so
                    newAlpha = max a resNega
                 in newAlpha
@@ -498,7 +498,7 @@ miniWrapper grid player capWhite capBlack =
                        else capBlack
                    resNega =
                      if so < 5000
-                       then -negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
+                       then negate $ negaMax newGrid (nextPlayer player) depth (-beta) (-a) nW nB
                        else so
                 in if resNega > a
                      then (resNega, cr)
