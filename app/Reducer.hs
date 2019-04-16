@@ -494,8 +494,6 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
-      (_, sMax) = head movesSort
-      movesFilter = filter (\(_, s) -> s >= sMax - filterLimit) movesSort
       abPruning a (cr, so) =
         if a >= beta
           then a
@@ -516,7 +514,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesFilter
+          then foldl' abPruning alpha movesSort
           else scoringEnd grid capWhite capBlack player
    in res
 
@@ -535,8 +533,8 @@ validIACoordsFirst grd p d =
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
   let depth = 5
-      alpha = div (minBound :: Int) 8
-      beta = div (maxBound :: Int) 8
+      alpha = negate cutNegaMax
+      beta = cutNegaMax
       moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
