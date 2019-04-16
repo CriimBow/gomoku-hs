@@ -401,7 +401,7 @@ scoringOrdoring grid capWhite capBlack player move =
  let
     sp = moveScoringAlign grid capWhite capBlack player move countToScorePlayer
     (sc, _, _) = moveScoringCap grid capWhite capBlack player move
-    so = moveScoringAlign grid capWhite capBlack player move countToScoreOponnent
+    so = moveScoringAlign grid capWhite capBlack (nextPlayer player) move countToScoreOponnent
  in sp + so + sc
 
 scoringNegaMax :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
@@ -436,7 +436,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       movesSort :: [(Coord, Int)]
       movesSort = sortBy compF nxtMovesAndScore
       movesSortBest :: [Coord]
-      movesSortBest = map (\(c, _) -> c) $ take 9 movesSort
+      movesSortBest = map (\(c, _) -> c) $ take 7 movesSort
       abPruning a (cx, cy) =
         if a >= beta
           then a
@@ -487,5 +487,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, (cx, cy))
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) $ take 9 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ map (\(c, _) -> c) $ take 7 movesSort
    in bestMove
