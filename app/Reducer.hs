@@ -231,6 +231,10 @@ charToCell '1' = PieceWhite
 charToCell '2' = PieceBlack
 charToCell _ = EmptyCell
 
+boolToInt :: Bool -> Int
+boolToInt True = 1
+boolToInt False = 0
+
 validCoords :: Grid -> Player -> GridBool
 validCoords grd p = delDoubleThree grd p (Vec.map (== cellToChar EmptyCell) grd)
 
@@ -343,9 +347,7 @@ countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in if be || be'
-        then c + c' + 1
-        else c + c' + 2
+   in c + c' + (boolToInt (be && be'))
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -358,10 +360,10 @@ sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
                else (True, nb + 1, False)
         else (False, nb, True)
 
-moveScoringAlign :: Grid -> Player -> Coord -> (Int -> Int) -> Int
-moveScoringAlign grid player move countScore =
+moveScoringAlign :: Grid -> Player -> Coord -> Int
+moveScoringAlign grid player move =
   let countedDir = map (countDir grid player move) [(0, 1), (1, 0), (1, 1), (1, -1)]
-      score = foldl' (\p c -> p + countScore c) 0 countedDir
+      score = foldl' (\p c -> p + countToScorePlayer c) 0 countedDir
    in score
 
 moveScoringCap :: Grid -> Int -> Int -> Player -> Coord -> (Int, Int, Int)
@@ -387,30 +389,15 @@ countToScorePlayer count
   | count == 5 = scoreEndGame
   | otherwise = 0
 
-countToScoreOponnent :: Int -> Int
-countToScoreOponnent count
-  | count == 2 = 100
-  | count == 3 = 1000
-  | count == 4 = scoreEndGame
-  | otherwise = 0
-
 scoringOrdoring :: Grid -> Int -> Int -> Player -> Coord -> Int
 scoringOrdoring grid capWhite capBlack player move =
-  let sp = moveScoringAlign grid player move countToScorePlayer
+  let sp = moveScoringAlign grid player move
       (sc, _, _) = moveScoringCap grid capWhite capBlack player move
-      so = moveScoringAlign grid (nextPlayer player) move countToScoreOponnent
+      so = moveScoringAlign grid (nextPlayer player) move
       (sco, _, _) = moveScoringCap grid capWhite capBlack (nextPlayer player) move
    in sp + so + sc + sco
 
 -- Scoring End
-countToScoreEnd :: Int -> Int
-countToScoreEnd count
-  | count == 2 = 10
-  | count == 3 = 100
-  | count == 4 = 1000
-  | count == 5 = scoreEndGame
-  | otherwise = 0
-
 scoreAlignY :: Grid -> Player -> Int
 scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
   where
@@ -469,9 +456,7 @@ scoringEnd grid capWhite capBlack player =
         then scoreCapWhite + scoreAlignWhite - scoreCapBlack - scoreAlignBlack
         else scoreCapBlack + scoreAlignBlack - scoreCapWhite - scoreAlignWhite
 
-------------
--- SOLVER --
-------------
+-- SOLVER
 solver :: Grid -> Player -> Int -> Int -> Coord
 solver = miniWrapper
 
