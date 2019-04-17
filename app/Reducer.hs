@@ -505,7 +505,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesSort
+          then foldl' abPruning alpha $ take 9 movesSort
           else scoringEnd grid capWhite capBlack player
    in res
 
@@ -521,12 +521,9 @@ validIACoordsFirst grd p d =
       v = delDoubleThree grd p emptyAndDist
    in v
 
-depthWrapper :: Int
-depthWrapper = 6
-
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = depthWrapper
+  let depth = 6
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
@@ -552,5 +549,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 32 movesSort
    in bestMove
