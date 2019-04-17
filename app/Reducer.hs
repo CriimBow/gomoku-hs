@@ -346,7 +346,7 @@ countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in c + c' + 1 + boolToInt (be || be')
+   in c + c' + 1 + (boolToInt be) + (boolToInt be')
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -380,17 +380,17 @@ moveScoringCap grid capWhite capBlack player move =
         then (scoreCapture, nbCap, capBlack)
         else (scoreCapture, capWhite, nbCap)
 
-filterLimit :: Int
-filterLimit = 50000
-
 scoreEndGame :: Int
-scoreEndGame = 1000000
+scoreEndGame = 10000000
 
 cutNegaMax :: Int
 cutNegaMax = div scoreEndGame 2
 
+depthScoreOffset :: Int
+depthScoreOffset = 100000
+
 scoreCap :: Int
-scoreCap = 500
+scoreCap = 555
 
 countToScore :: Int -> Int
 countToScore count
@@ -479,9 +479,6 @@ compF (_, s1) (_, s2)
   | s1 < s2 = GT
   | otherwise = EQ
 
-filterMoves :: [(Coord, Int)] -> [(Coord, Int)]
-filterMoves movesAndScore = take 5 movesAndScore
-
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
   let moves = nextMoves grid
@@ -503,12 +500,12 @@ negaMax grid player depth alpha beta capWhite capBlack =
                    resNega =
                      if so < cutNegaMax
                        then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
-                       else so
+                       else so + (depthScoreOffset * depth)
                    newAlpha = max a resNega
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha $ filterMoves movesSort
+          then foldl' abPruning alpha $ take 9 movesSort
           else scoringEnd grid capWhite capBlack player
    in res
 
@@ -548,9 +545,9 @@ miniWrapper grid player capWhite capBlack =
                    resNega =
                      if so < cutNegaMax
                        then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
-                       else so
+                       else so + (depthScoreOffset * depth)
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 7 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 24 movesSort
    in bestMove
