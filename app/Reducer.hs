@@ -354,10 +354,10 @@ sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
    in if b && 0 <= cx' && 0 <= cy' && hGoGrid > cx' && hGoGrid > cy'
         then if grid Vec.! (cy' * hGoGrid + cx') /= playerToChar player
                then if grid Vec.! (cy' * hGoGrid + cx') == cellToChar EmptyCell
-                      then (False, nb, False)
-                      else (False, nb, True)
+                      then (False, nb, True)
+                      else (False, nb, False)
                else (True, nb + 1, False)
-        else (False, nb, True)
+        else (False, nb, False)
 
 moveScoringAlign :: Grid -> Player -> Coord -> Int
 moveScoringAlign grid player move =
@@ -390,7 +390,7 @@ cutNegaMax :: Int
 cutNegaMax = div scoreEndGame 2
 
 scoreCap :: Int
-scoreCap = 300
+scoreCap = 60
 
 countToScore :: Int -> Int
 countToScore count
@@ -473,6 +473,12 @@ validIACoords grd d =
       emptyAndDist = Vec.imap (\i e -> e && grd_dist Vec.! i) empty
    in emptyAndDist
 
+filterMoves :: [(Coord, Int)] -> [(Coord, Int)]
+filterMoves movesSort = let mvs = filter (\(_, s) -> s > 50) movesSort
+                        in if null mvs
+                         then movesSort
+                         else mvs
+
 compF :: (Coord, Int) -> (Coord, Int) -> Ordering
 compF (_, s1) (_, s2)
   | s1 > s2 = LT
@@ -506,7 +512,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha movesSort
+          then foldl' abPruning alpha $ filterMoves movesSort
           else scoringEnd grid capWhite capBlack player
    in res
 
@@ -550,5 +556,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ filterMoves movesSort
    in bestMove
