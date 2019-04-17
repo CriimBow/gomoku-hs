@@ -455,8 +455,8 @@ scoringEnd grid capWhite capBlack player =
       scoreAlignBlack = scoreAlign grid PlayerBlack
       scoreAlignWhite = scoreAlign grid PlayerWhite
    in if player == PlayerWhite
-        then scoreCapWhite + scoreAlignWhite - scoreCapBlack - scoreAlignBlack
-        else scoreCapBlack + scoreAlignBlack - scoreCapWhite - scoreAlignWhite
+        then scoreCapWhite + scoreAlignWhite - scoreCapBlack - (scoreAlignBlack * 2)
+        else scoreCapBlack + scoreAlignBlack - scoreCapWhite - (scoreAlignWhite * 2)
 
 -- SOLVER
 solver :: Grid -> Player -> Int -> Int -> Coord
@@ -481,7 +481,7 @@ compF (_, s1) (_, s2)
 
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
-  let moves = nextMoves grid
+  let moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
@@ -505,7 +505,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                 in newAlpha
       res =
         if depth > 0
-          then foldl' abPruning alpha $ take 9 movesSort
+          then foldl' abPruning alpha movesSort
           else scoringEnd grid capWhite capBlack player
    in res
 
@@ -521,9 +521,12 @@ validIACoordsFirst grd p d =
       v = delDoubleThree grd p emptyAndDist
    in v
 
+depthWrapper :: Int
+depthWrapper = 6
+
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 6
+  let depth = depthWrapper
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
@@ -549,5 +552,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 24 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) movesSort
    in bestMove
