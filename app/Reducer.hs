@@ -409,41 +409,34 @@ scoringOrdoring grid capWhite capBlack player move =
    in sp + so + sc + sco
 
 -- Scoring End
+scoreLine :: Grid -> Player -> Coord -> (Int, Int) -> Int
+scoreLine grd p (cx, cy) (dx, dy) =
+  let (s, c) = foldl'   (\acc i -> foldlScoreLine grd p (cx + dx * i, cy + dy * i) acc)    (0, 0)      [0 .. hGoGrid - 1]
+  in s + countToScore c
+
+foldlScoreLine :: Grid -> Player -> Coord -> (Int, Int) -> (Int, Int)
+foldlScoreLine grd p (cx, cy) (sAcc, cur) =
+                                  if cx >= 0 && cy >= 0 && cx < hGoGrid && cy < hGoGrid  && grd Vec.! (cx + cy * hGoGrid) == playerToChar p
+                                     then (sAcc, cur + 1)
+                                     else (sAcc + countToScore cur, 0)
+
 scoreAlignY :: Grid -> Player -> Int
-scoreAlignY grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
-  where
-    scoreLine :: Grid -> Player -> Int -> Int
-    scoreLine grd p i =
-      let (s, c) =
-            foldl'
-              (\(sAcc, cur) j ->
-                 if grd Vec.! (i + j * hGoGrid) == playerToChar p
-                   then (sAcc, cur + 1)
-                   else (sAcc + countToScore cur, 0))
-              (0, 0)
-              [0 .. hGoGrid - 1]
-       in s + countToScore c
+scoreAlignY grid player = foldl' (+) 0 $ map (\i -> scoreLine grid player (0, i) (1, 0)) [0 .. hGoGrid - 1]
 
 scoreAlignX :: Grid -> Player -> Int
-scoreAlignX grid player = foldl' (+) 0 $ map (scoreLine grid player) [0 .. hGoGrid - 1]
-  where
-    scoreLine :: Grid -> Player -> Int -> Int
-    scoreLine grd p i =
-      let (s, c) =
-            foldl'
-              (\(sAcc, cur) j ->
-                 if grd Vec.! (j + i * hGoGrid) == playerToChar p
-                   then (sAcc, cur + 1)
-                   else (sAcc + countToScore cur, 0))
-              (0, 0)
-              [0 .. hGoGrid - 1]
-       in s + countToScore c
+scoreAlignX grid player = foldl' (+) 0 $ map (\i -> scoreLine grid player (i, 0) (0, 1)) [0 .. hGoGrid - 1]
 
 scoreAlignDiag2 :: Grid -> Player -> Int
-scoreAlignDiag2 grid player = 0
+scoreAlignDiag2 grid player =
+  let s1 = foldl' (+) 0 $ map (\i -> scoreLine grid player (0, i) (1, 1)) [0 .. hGoGrid - 1]
+      s2 = foldl' (+) 0 $ map (\i -> scoreLine grid player (i, 0) (1, 1)) [1 .. hGoGrid - 1]
+    in s1 + s2
 
 scoreAlignDiag1 :: Grid -> Player -> Int
-scoreAlignDiag1 grid player = 0
+scoreAlignDiag1 grid player =
+  let s1 = foldl' (+) 0 $ map (\i -> scoreLine grid player (i, 0) (-1, 1)) [0 .. hGoGrid - 1]
+      s2 = foldl' (+) 0 $ map (\i -> scoreLine grid player (hGoGrid - 1, i) (-1, 1)) [1 .. hGoGrid - 1]
+    in s1 + s2
 
 scoreAlign :: Grid -> Player -> Int
 scoreAlign grid player =
