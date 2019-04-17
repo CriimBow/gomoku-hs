@@ -390,7 +390,7 @@ cutNegaMax :: Int
 cutNegaMax = div scoreEndGame 2
 
 scoreCap :: Int
-scoreCap = 55
+scoreCap = 300
 
 countToScore :: Int -> Int
 countToScore count
