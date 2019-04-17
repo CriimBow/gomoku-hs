@@ -346,7 +346,7 @@ countDir :: Grid -> Player -> Coord -> (Int, Int) -> Int
 countDir grid player cr (dx, dy) =
   let (_, c, be) = foldl' (sumDist grid player cr (dx, dy)) (True, 0, False) [1 .. 4]
       (_, c', be') = foldl' (sumDist grid player cr (-dx, -dy)) (True, 0, False) [1 .. 4]
-   in c + c' + 1 + boolToInt (be && be')
+   in c + c' + 1 + boolToInt (be || be')
 
 sumDist :: Grid -> Player -> Coord -> (Int, Int) -> (Bool, Int, Bool) -> Int -> (Bool, Int, Bool)
 sumDist grid player (cx, cy) (dx, dy) (b, nb, _) d =
@@ -480,7 +480,7 @@ compF (_, s1) (_, s2)
   | otherwise = EQ
 
 filterMoves :: [(Coord, Int)] -> [(Coord, Int)]
-filterMoves movesAndScore = take 7 movesAndScore
+filterMoves movesAndScore = take 5 movesAndScore
 
 negaMax :: Grid -> Player -> Int -> Int -> Int -> Int -> Int -> Int
 negaMax grid player depth alpha beta capWhite capBlack =
@@ -552,5 +552,5 @@ miniWrapper grid player capWhite capBlack =
                 in if resNega > a
                      then (resNega, cr)
                      else (a, co)
-      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 23 movesSort
+      (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 7 movesSort
    in bestMove
