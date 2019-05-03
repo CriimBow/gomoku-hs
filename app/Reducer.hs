@@ -485,7 +485,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      abPruning a (cr, so) =
+      abPruning a (cr, _) =
         if a >= beta || a >= cutNegaMax
           then a
           else let (newGrid, nbDel) = posePieceAndDelete cr player grid
@@ -497,10 +497,7 @@ negaMax grid player depth alpha beta capWhite capBlack =
                      if player == PlayerBlack
                        then capBlack + nbDel
                        else capBlack
-                   resNega =
-                     if so < cutNegaMax
-                       then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
-                       else so + (depthScoreOffset * depth)
+                   resNega = negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
                    newAlpha = max a resNega
                 in newAlpha
       res =
@@ -523,14 +520,14 @@ validIACoordsFirst grd p d =
 
 miniWrapper :: Grid -> Player -> Int -> Int -> Coord
 miniWrapper grid player capWhite capBlack =
-  let depth = 6
+  let depth = 5
       alpha = div (minBound :: Int) 8
       beta = div (maxBound :: Int) 8
       moves = nextMovesFirst grid player
       nxtMovesAndScore :: [(Coord, Int)]
       nxtMovesAndScore = map (\(cx, cy) -> ((cx, cy), scoringOrdoring grid capWhite capBlack player (cx, cy))) moves
       movesSort = sortBy compF nxtMovesAndScore
-      abPruning (a, co) (cr, so) =
+      abPruning (a, co) (cr, _) =
         if a >= beta || a >= cutNegaMax
           then (a, co)
           else let (newGrid, nbDel) = posePieceAndDelete cr player grid
@@ -542,11 +539,8 @@ miniWrapper grid player capWhite capBlack =
                      if player == PlayerBlack
                        then capBlack + nbDel
                        else capBlack
-                   resNega =
-                     if so < cutNegaMax
-                       then negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
-                       else so + (depthScoreOffset * depth)
-                in if resNega > a
+                   resNega = negate $ negaMax newGrid (nextPlayer player) (depth - 1) (-beta) (-a) nW nB
+                in if resNega > a || resNega > cutNegaMax
                      then (resNega, cr)
                      else (a, co)
       (_, bestMove) = foldl' abPruning (alpha, (8, 8)) $ take 32 movesSort
