@@ -17,4 +17,4 @@ stack build
 stack exec gomoku-exe
 ```
 
-![Connect_img](https://github.com/cepalle/gomoku-rs/blob/master/assets/img.png)
+![Connect_img](https://github.com/cepalle/gomoku-hs/blob/master/assets/img.png)
